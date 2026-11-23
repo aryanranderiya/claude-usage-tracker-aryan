@@ -308,6 +308,13 @@ struct ProfileSwitcherCompact: View {
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 12))
 
+                        Text(profile.menuBarLabel)
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+
                         Text(profile.name)
                             .font(.system(size: 12, weight: .medium))
 
@@ -383,6 +390,13 @@ struct ProfileSwitcherBar: View {
                     HStack(spacing: 8) {
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 12))
+
+                        Text(profile.menuBarLabel)
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
 
                         Text(profile.name)
                             .font(.system(size: 12, weight: .medium))

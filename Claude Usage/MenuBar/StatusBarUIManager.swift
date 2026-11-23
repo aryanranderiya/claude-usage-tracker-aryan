@@ -443,7 +443,7 @@ final class StatusBarUIManager {
                         weekPercentage: showWeek ? weekDisplay : 0,
                         sessionStatus: sessionStatus,
                         weekStatus: weekStatus,
-                        profileName: profile.name,
+                        profileName: profile.menuBarLabel,
                         monochromeMode: useMonochrome,
                         isDarkMode: menuBarIsDark,
                         useSystemColor: false,
@@ -460,7 +460,7 @@ final class StatusBarUIManager {
                         weekPercentage: showWeek ? weekDisplay : 0,
                         sessionStatus: sessionStatus,
                         weekStatus: weekStatus,
-                        profileInitial: String(profile.name.prefix(1)),
+                        profileInitial: profile.menuBarLabel,
                         monochromeMode: useMonochrome,
                         isDarkMode: menuBarIsDark,
                         useSystemColor: false,
@@ -478,7 +478,7 @@ final class StatusBarUIManager {
                     weekPercentage: showWeek ? weekDisplay : nil,
                     sessionStatus: sessionStatus,
                     weekStatus: weekStatus,
-                    profileName: config.showProfileLabel ? profile.name : nil,
+                    profileName: config.showProfileLabel ? profile.menuBarLabel : nil,
                     monochromeMode: useMonochrome,
                     isDarkMode: menuBarIsDark,
                     useSystemColor: false,
@@ -492,7 +492,7 @@ final class StatusBarUIManager {
                 image = renderer.createCompactDot(
                     percentage: sessionDisplay,
                     status: sessionStatus,
-                    profileInitial: config.showProfileLabel ? String(profile.name.prefix(1)) : nil,
+                    profileInitial: config.showProfileLabel ? profile.menuBarLabel : nil,
                     monochromeMode: useMonochrome,
                     isDarkMode: menuBarIsDark,
                     useSystemColor: false,
@@ -505,7 +505,7 @@ final class StatusBarUIManager {
                     weekPercentage: showWeek ? weekDisplay : nil,
                     sessionStatus: sessionStatus,
                     weekStatus: weekStatus,
-                    profileName: config.showProfileLabel ? profile.name : nil,
+                    profileName: config.showProfileLabel ? profile.menuBarLabel : nil,
                     monochromeMode: useMonochrome,
                     isDarkMode: menuBarIsDark,
                     useSystemColor: false,
@@ -552,6 +552,14 @@ final class StatusBarUIManager {
                 statusItem.length = stableLength
             }
             button.image = finalImage
+            button.toolTip = "\(profile.name) · \(profile.sourceDisplayName)"
+        }
+    }
+
+    /// Applies one tooltip to every single-profile status item.
+    func setToolTip(_ text: String?) {
+        for statusItem in statusItems.values {
+            statusItem.button?.toolTip = text
         }
     }
 

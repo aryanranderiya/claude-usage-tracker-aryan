@@ -21,6 +21,7 @@ enum ProviderRegistry {
         .anthropic: ProviderDescriptor(
             id: .anthropic,
             displayName: "Anthropic",
+            shortName: "CC",
             logoAssetName: "ProviderLogoAnthropic",
             logoSystemSymbolFallback: "sparkle",
             statusPageURL: URL(string: "https://status.claude.com/api/v2/status.json"),
@@ -41,6 +42,7 @@ enum ProviderRegistry {
         .codex: ProviderDescriptor(
             id: .codex,
             displayName: "OpenAI Codex",
+            shortName: "CX",
             logoAssetName: "ProviderLogoOpenAI",
             logoSystemSymbolFallback: "circle.hexagongrid",
             statusPageURL: URL(string: "https://status.openai.com/api/v2/status.json"),
@@ -61,6 +63,7 @@ enum ProviderRegistry {
         .cswap: ProviderDescriptor(
             id: .cswap,
             displayName: "cswap",
+            shortName: "CS",
             logoAssetName: "ProviderLogoAnthropic",
             logoSystemSymbolFallback: "arrow.triangle.2.circlepath",
             statusPageURL: URL(string: "https://status.claude.com/api/v2/status.json"),
@@ -81,6 +84,7 @@ enum ProviderRegistry {
         .opencode: ProviderDescriptor(
             id: .opencode,
             displayName: "OpenCode",
+            shortName: "OC",
             logoAssetName: "ProviderLogoOpenCode",
             logoSystemSymbolFallback: "chevron.left.forwardslash.chevron.right",
             statusPageURL: nil,

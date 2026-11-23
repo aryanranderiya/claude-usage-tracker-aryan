@@ -22,15 +22,23 @@ struct ProfileSelectionRow: View {
                     .font(.system(size: 14))
                     .foregroundColor(isSelected ? .accentColor : .secondary)
 
+                // Source badge (CC/CS/OC/CX)
+                Text(profile.provider.descriptor.shortName)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+
                 // Profile name (truncated)
                 Text(profile.name)
                     .font(DesignTokens.Typography.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                // Active badge
+                // Primary badge
                 if isActive {
-                    Text("multiprofile.active_badge".localized)
+                    Text("profiles.primary_badge".localized)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)

@@ -897,13 +897,13 @@ final class MenuBarIconRenderer {
             drawPaceMarkerTick(tickPath, paceStatus: weekPaceStatus, showPaceMarker: showPaceMarker, isDarkMode: isDarkMode)
         }
 
-        // Profile initial in center
-        let initial = String(profileInitial.prefix(1)).uppercased()
+        // Source label in the center (CC/CS/OC/CX, or a user override).
+        let label = String(profileInitial.prefix(2)).uppercased()
         let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 8, weight: .bold),
+            .font: NSFont.systemFont(ofSize: label.count > 1 ? 6.5 : 8, weight: .bold),
             .foregroundColor: textColor
         ]
-        let labelString = initial as NSString
+        let labelString = label as NSString
         let labelSize = labelString.size(withAttributes: labelAttributes)
         let labelX = center.x - labelSize.width / 2
         let labelY = center.y - labelSize.height / 2

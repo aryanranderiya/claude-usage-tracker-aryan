@@ -82,7 +82,8 @@ class ProfileManager: ObservableObject {
             autoStartSessionEnabled: copySettingsFrom?.autoStartSessionEnabled ?? false,
             checkOverageLimitEnabled: copySettingsFrom?.checkOverageLimitEnabled ?? true,
             notificationSettings: copySettingsFrom?.notificationSettings ?? NotificationSettings(),
-            isSelectedForDisplay: true
+            isSelectedForDisplay: true,
+            nameIsCustomized: name != nil
         )
 
         profiles.append(newProfile)
@@ -94,6 +95,7 @@ class ProfileManager: ObservableObject {
 
     func updateProfile(_ profile: Profile) {
         if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+            let previous = profiles[index]
             profiles[index] = profile
 
             if activeProfile?.id == profile.id {
@@ -111,6 +113,10 @@ class ProfileManager: ObservableObject {
             }
 
             profileStore.saveProfiles(profiles)
+
+            if previous.name != profile.name || previous.shortLabel != profile.shortLabel {
+                NotificationCenter.default.post(name: .multiProfileConfigChanged, object: nil)
+            }
         }
     }
 

@@ -19,6 +19,10 @@ struct ProviderDescriptor {
     /// are not localized.
     let displayName: String
 
+    /// Very short source label for compact UI: profile badges, menu bar
+    /// labels, and the concentric status icon. User-editable per profile.
+    let shortName: String
+
     /// Asset catalog image for the provider mark; SF Symbol used as fallback.
     let logoAssetName: String
     let logoSystemSymbolFallback: String

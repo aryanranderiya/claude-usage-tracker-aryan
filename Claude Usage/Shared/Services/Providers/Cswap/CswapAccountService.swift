@@ -21,6 +21,7 @@ struct CswapAccount: Equatable {
     let email: String
     let organizationUuid: String?
     let organizationName: String?
+    let alias: String?
     let planLabel: String?
     let isActive: Bool
     let isDisabled: Bool
@@ -30,7 +31,18 @@ struct CswapAccount: Equatable {
     let scoped: [CswapScopedWindow]
 
     var accountKey: String { "cswap:\(email.lowercased())" }
-    var displayName: String { isDisabled ? "\(email) (disabled)" : email }
+
+    /// Human label without a rotation-state suffix.
+    var preferredName: String {
+        let trimmed = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.flatMap { $0.isEmpty ? nil : $0 } ?? email
+    }
+
+    /// Label used by cswap profile rows. Disabled is a cswap rotation flag,
+    /// not a property of the account itself, so it is appended only here.
+    var displayName: String {
+        isDisabled ? "\(preferredName) (disabled)" : preferredName
+    }
 
     var hasAnyUsage: Bool {
         fiveHour != nil || sevenDay != nil || !scoped.isEmpty
@@ -70,6 +82,7 @@ final class CswapAccountService {
 
             let organizationUuid = account["organizationUuid"] as? String
             let organizationName = account["organizationName"] as? String
+            let alias = account["alias"] as? String
             let disabled = account["disabled"] as? Bool ?? false
 
             let row = usageRows[slot] as? [String: Any]
@@ -108,6 +121,7 @@ final class CswapAccountService {
                 email: email,
                 organizationUuid: organizationUuid,
                 organizationName: organizationName,
+                alias: alias,
                 planLabel: planLabel,
                 isActive: activeNumber == number,
                 isDisabled: disabled,

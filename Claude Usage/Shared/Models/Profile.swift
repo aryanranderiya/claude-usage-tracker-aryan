@@ -13,6 +13,19 @@ struct Profile: Codable, Identifiable, Equatable {
     let id: UUID
     var name: String
 
+    /// Optional 1–3 character label for compact menu bar presentations.
+    /// `nil` falls back to the provider's short name (CC/CS/OC/CX).
+    var shortLabel: String?
+
+    /// True once the user explicitly renames this profile. Auto-detection
+    /// only refreshes names whose flag is still false.
+    var nameIsCustomized: Bool
+
+    /// Non-secret account identity captured at detection time (email, org,
+    /// etc.). Kept even when the display name is customized so the edit sheet
+    /// can always show which underlying account a profile belongs to.
+    var detectedAccountIdentifier: String?
+
     /// Which usage provider this profile tracks. Existing (pre-provider)
     /// profiles decode as `.anthropic`. Immutable after creation in the UI.
     var provider: Provider
@@ -116,10 +129,16 @@ struct Profile: Codable, Identifiable, Equatable {
         notificationSettings: NotificationSettings = NotificationSettings(),
         isSelectedForDisplay: Bool = true,
         createdAt: Date = Date(),
-        lastUsedAt: Date = Date()
+        lastUsedAt: Date = Date(),
+        shortLabel: String? = nil,
+        nameIsCustomized: Bool = false,
+        detectedAccountIdentifier: String? = nil
     ) {
         self.id = id
         self.name = name
+        self.shortLabel = shortLabel
+        self.nameIsCustomized = nameIsCustomized
+        self.detectedAccountIdentifier = detectedAccountIdentifier
         self.provider = provider
         self.claudeSessionKey = claudeSessionKey
         self.organizationId = organizationId
@@ -156,6 +175,7 @@ struct Profile: Codable, Identifiable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name
+        case shortLabel, nameIsCustomized, detectedAccountIdentifier
         case provider
         case claudeSessionKey, organizationId
         case apiSessionKey, apiOrganizationId, apiSessionKeyExpiry
@@ -179,6 +199,9 @@ struct Profile: Codable, Identifiable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
+        shortLabel = try c.decodeIfPresent(String.self, forKey: .shortLabel)
+        nameIsCustomized = try c.decodeIfPresent(Bool.self, forKey: .nameIsCustomized) ?? false
+        detectedAccountIdentifier = try c.decodeIfPresent(String.self, forKey: .detectedAccountIdentifier)
         // Pre-provider profiles have no key; an unknown raw value (written by a
         // FUTURE app version with more providers) must degrade to .anthropic,
         // never throw — a throw here wipes the whole profile list.
@@ -218,6 +241,9 @@ struct Profile: Codable, Identifiable, Equatable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
         try c.encode(name, forKey: .name)
+        try c.encodeIfPresent(shortLabel, forKey: .shortLabel)
+        try c.encode(nameIsCustomized, forKey: .nameIsCustomized)
+        try c.encodeIfPresent(detectedAccountIdentifier, forKey: .detectedAccountIdentifier)
         try c.encode(provider, forKey: .provider)
         // Credentials live in the Keychain (per-profile items), NOT in the plist.
         // The plist on disk is world-readable cleartext — see #267.
@@ -250,6 +276,59 @@ struct Profile: Codable, Identifiable, Equatable {
     }
 
     // MARK: - Computed Properties
+
+    /// Label used by compact menu bar renderings. User override first, then
+    /// the provider's source abbreviation (CC/CS/OC/CX).
+    var menuBarLabel: String {
+        let custom = shortLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !custom.isEmpty {
+            return String(custom.prefix(3)).uppercased()
+        }
+        return provider.descriptor.shortName
+    }
+
+    /// Human-readable source for the profile row and edit sheet.
+    var sourceDisplayName: String {
+        switch provider {
+        case .anthropic:
+            return "Claude Code"
+        case .cswap:
+            return "cswap"
+        case .opencode:
+            return "OpenCode Go"
+        case .codex:
+            return "Codex CLI"
+        }
+    }
+
+    /// True for profiles created by local-tool discovery.
+    var isAutoDetected: Bool {
+        externalAccountKey != nil
+    }
+
+    /// Best-effort account identifier for display next to the source.
+    var detectedAccountText: String? {
+        if let detectedAccountIdentifier, !detectedAccountIdentifier.isEmpty {
+            return detectedAccountIdentifier
+        }
+        if let json = oauthAccountJSON,
+           let data = json.data(using: .utf8),
+           let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+           let email = object["emailAddress"] as? String ?? object["email"] as? String {
+            return email
+        }
+        if let key = externalAccountKey, key.hasPrefix("cswap:") {
+            return String(key.dropFirst("cswap:".count))
+        }
+        if let separator = name.range(of: " · ") {
+            return String(name[separator.upperBound...])
+        }
+        if name.contains("@") {
+            return name
+        }
+        return nil
+    }
+
     var hasClaudeAI: Bool {
         claudeSessionKey != nil && organizationId != nil
     }

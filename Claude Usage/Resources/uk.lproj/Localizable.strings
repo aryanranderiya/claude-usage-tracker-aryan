@@ -1153,3 +1153,16 @@
 "keep_awake.consent_confirm" = "Додати хуки й увімкнути";
 "keep_awake.problem_hooks" = "Автоматичний режим не бачить Claude Code: його хуків немає в ~/.claude/settings.json. Вимкніть і знову ввімкніть автоматичний режим, щоб перевстановити їх.";
 "keep_awake.problem_listener" = "Автоматичний режим не бачить Claude Code: порт локального слухача зайнятий іншою програмою або іншою копією Claude Usage.";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";

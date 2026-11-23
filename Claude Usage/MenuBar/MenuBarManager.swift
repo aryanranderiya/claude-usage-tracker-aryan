@@ -713,6 +713,9 @@ class MenuBarManager: NSObject, ObservableObject {
                 usage: usage,
                 apiUsage: apiUsage
             )
+            if let profile = profileManager.activeProfile {
+                statusBarUIManager?.setToolTip("\(profile.name) · \(profile.sourceDisplayName)")
+            }
         }
     }
 
@@ -1189,6 +1192,7 @@ class MenuBarManager: NSObject, ObservableObject {
         }
 
         statusBarUIManager?.setup(target: self, action: #selector(togglePopover), config: displayConfig)
+        statusBarUIManager?.setToolTip("\(profile.name) · \(profile.sourceDisplayName)")
 
         // Defer icon update to next run loop iteration to let NSStatusBar finalize layout
         DispatchQueue.main.async { [weak self] in

@@ -1166,3 +1166,16 @@
 "keep_awake.consent_confirm" = "훅 추가 후 켜기";
 "keep_awake.problem_hooks" = "자동 모드가 Claude Code를 감지할 수 없습니다: ~/.claude/settings.json에 훅이 없습니다. 자동 모드를 껐다가 다시 켜면 다시 설치됩니다.";
 "keep_awake.problem_listener" = "자동 모드가 Claude Code를 감지할 수 없습니다: 로컬 리스너 포트를 다른 앱이나 다른 Claude Usage가 사용 중입니다.";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";

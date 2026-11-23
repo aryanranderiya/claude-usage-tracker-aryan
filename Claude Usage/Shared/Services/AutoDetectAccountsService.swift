@@ -11,12 +11,13 @@ import Foundation
 final class AutoDetectAccountsService {
     static let shared = AutoDetectAccountsService()
 
-    private static let didAutoConfigureMultiProfileKey = "didAutoConfigureLocalAccounts"
+    private static let didApplySinglePrimaryKey = "didApplySinglePrimaryMenuBar"
 
     private struct DiscoveredAccount {
         let provider: Provider
         let key: String
         let name: String
+        let accountIdentifier: String?
         let codexCredentialsJSON: String?
         let refreshInterval: TimeInterval
     }
@@ -40,15 +41,32 @@ final class AutoDetectAccountsService {
 
         // The pre-existing Anthropic CLI profile already follows the account
         // cswap has active. Do not add a second profile for that same login.
-        let cliProfileEmails = Set(
+        // Prefer cswap's live active record over a possibly stale oauthAccount
+        // snapshot captured on an earlier launch.
+        let activeCswap = CswapAccountService.shared.loadAccounts().first(where: { $0.isActive })
+        var cliProfileEmails = Set(
             profiles
                 .filter { $0.provider == .anthropic && $0.hasAnyCredentials }
                 .compactMap { Self.oauthEmail(from: $0.oauthAccountJSON) }
                 .map { $0.lowercased() }
         )
+        if let activeEmail = activeCswap?.email {
+            cliProfileEmails.insert(activeEmail.lowercased())
+        }
 
         for account in discovered {
             if let index = profiles.firstIndex(where: { $0.externalAccountKey == account.key }) {
+                // Keep auto-generated names in sync with the tool that owns
+                // the account, but never overwrite a user-chosen name.
+                if !profiles[index].nameIsCustomized, profiles[index].name != account.name {
+                    profiles[index].name = account.name
+                    updatedExisting = true
+                }
+                if let identifier = account.accountIdentifier,
+                   profiles[index].detectedAccountIdentifier != identifier {
+                    profiles[index].detectedAccountIdentifier = identifier
+                    updatedExisting = true
+                }
                 // Codex snapshot profiles are read-only copies. Re-copy the
                 // current access token so the profile keeps working without
                 // ever refreshing another tool's token family.
@@ -83,8 +101,34 @@ final class AutoDetectAccountsService {
                 isSelectedForDisplay: true
             )
             profile.externalAccountKey = account.key
+            profile.detectedAccountIdentifier = account.accountIdentifier
+            profile.nameIsCustomized = false
             profiles.append(profile)
             addedProfiles.append(profile)
+        }
+
+        // Replace generated names like "Funky Falcon" with the actual account
+        // identity. This also follows cswap's active account when it changes.
+        let anthropicCandidates = profiles.enumerated().filter { _, profile in
+            profile.provider == .anthropic && profile.hasAnyCredentials && !profile.nameIsCustomized
+        }
+        let anthropicTarget = anthropicCandidates.first(where: { $0.element.id == manager.activeProfile?.id })
+            ?? anthropicCandidates.first(where: { Self.oauthEmail(from: $0.element.oauthAccountJSON)?.lowercased() == activeCswap?.email.lowercased() })
+            ?? (anthropicCandidates.count == 1 ? anthropicCandidates.first : nil)
+
+        if let target = anthropicTarget {
+            let email = activeCswap?.email ?? Self.oauthEmail(from: target.element.oauthAccountJSON)
+            let preferredName = activeCswap?.preferredName ?? email
+            if let email {
+                if profiles[target.offset].detectedAccountIdentifier != email {
+                    profiles[target.offset].detectedAccountIdentifier = email
+                    updatedExisting = true
+                }
+                if let preferredName, target.element.name != preferredName {
+                    profiles[target.offset].name = preferredName
+                    updatedExisting = true
+                }
+            }
         }
 
         if !addedProfiles.isEmpty || updatedExisting {
@@ -94,6 +138,7 @@ final class AutoDetectAccountsService {
                 manager.activeProfile = refreshed
             }
             ProfileStore.shared.saveProfiles(profiles)
+            NotificationCenter.default.post(name: .multiProfileConfigChanged, object: nil)
             LoggingService.shared.log("AutoDetectAccounts: created \(addedProfiles.count) profile(s) from local tools")
         }
 
@@ -106,14 +151,16 @@ final class AutoDetectAccountsService {
             ProfileStore.shared.saveActiveProfileId(first.id)
         }
 
-        // Enable multi-profile mode once, when there is more than one account
-        // to show. After that the user's choice wins.
-        if !UserDefaults.standard.bool(forKey: Self.didAutoConfigureMultiProfileKey),
-           autoProfiles.count > 1 {
-            manager.displayMode = .multi
-            ProfileStore.shared.saveDisplayMode(.multi)
-            UserDefaults.standard.set(true, forKey: Self.didAutoConfigureMultiProfileKey)
-            NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+        // One menu bar tracker by default. The active profile is the primary
+        // account, and the user can change it from the header switcher or
+        // Manage Profiles. Multi-profile mode remains opt-in.
+        if !UserDefaults.standard.bool(forKey: Self.didApplySinglePrimaryKey) {
+            if manager.displayMode == .multi {
+                manager.displayMode = .single
+                ProfileStore.shared.saveDisplayMode(.single)
+                NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+            }
+            UserDefaults.standard.set(true, forKey: Self.didApplySinglePrimaryKey)
         }
     }
 
@@ -128,6 +175,7 @@ final class AutoDetectAccountsService {
                     provider: .cswap,
                     key: account.accountKey,
                     name: account.displayName,
+                    accountIdentifier: account.email,
                     codexCredentialsJSON: nil,
                     refreshInterval: 60
                 )
@@ -140,6 +188,7 @@ final class AutoDetectAccountsService {
                     provider: .opencode,
                     key: account.accountKey,
                     name: account.displayName,
+                    accountIdentifier: account.email ?? account.name,
                     codexCredentialsJSON: nil,
                     refreshInterval: 60
                 )
@@ -170,8 +219,8 @@ final class AutoDetectAccountsService {
             seenIdentities.insert(identity)
             seenPaths.insert(url.standardizedFileURL.path)
 
-            let label = credentials.email.map { "Codex · \($0)" }
-                ?? "Codex · \(url.deletingPathExtension().lastPathComponent)"
+            let label = credentials.email
+                ?? url.deletingPathExtension().lastPathComponent
 
             let credentialsJSON: String?
             if live {
@@ -191,6 +240,7 @@ final class AutoDetectAccountsService {
                     provider: .codex,
                     key: live ? "codex:default" : "codex:\(url.standardizedFileURL.path)",
                     name: label,
+                    accountIdentifier: credentials.email,
                     codexCredentialsJSON: credentialsJSON,
                     refreshInterval: 60
                 )

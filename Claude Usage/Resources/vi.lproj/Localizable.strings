@@ -1155,3 +1155,16 @@
 "keep_awake.consent_confirm" = "Thêm hook và bật";
 "keep_awake.problem_hooks" = "Chế độ tự động không thấy Claude Code: thiếu hook trong ~/.claude/settings.json. Tắt rồi bật lại chế độ tự động để cài lại.";
 "keep_awake.problem_listener" = "Chế độ tự động không thấy Claude Code: cổng của trình lắng nghe cục bộ đang được ứng dụng khác hoặc một bản Claude Usage khác sử dụng.";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";

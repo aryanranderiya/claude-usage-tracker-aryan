@@ -503,7 +503,7 @@
 /* MARK: - Manage Profiles */
 /* ==================== */
 "profiles.title" = "Manage Profiles";
-"profiles.subtitle" = "Create and manage multiple Claude accounts";
+"profiles.subtitle" = "Choose the primary account shown in the menu bar, and manage the other detected accounts here.";
 "profiles.create_new" = "Create New Profile";
 "profiles.about_title" = "About Profiles";
 "profiles.about_description" = "Each profile has its own:";
@@ -1153,3 +1153,16 @@
 "keep_awake.consent_confirm" = "Add Hooks and Turn On";
 "keep_awake.problem_hooks" = "Auto mode can't see Claude Code: its hooks are missing from ~/.claude/settings.json. Turn auto mode off and on again to reinstall them.";
 "keep_awake.problem_listener" = "Auto mode can't see Claude Code: the local listener's port is in use by another app or another copy of Claude Usage.";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";

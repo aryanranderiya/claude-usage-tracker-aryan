@@ -23,6 +23,19 @@ struct ManageProfilesView: View {
                     subtitle: "profiles.subtitle".localized
                 )
 
+                if profileManager.displayMode == .single {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                        Text("profiles.primary_hint".localized)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 2)
+                }
+
                 // Profile List
                 SettingsContentCard {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
@@ -367,107 +380,85 @@ struct ManageProfilesView: View {
 struct ProfileRow: View {
     let profile: Profile
     @StateObject private var profileManager = ProfileManager.shared
-    @State private var isEditing = false
-    @State private var editedName: String = ""
+    @State private var showingEditor = false
     @State private var showingDeleteConfirmation = false
 
     var body: some View {
         HStack(spacing: 12) {
-            // Profile Icon
-            Image(systemName: profile.hasCliAccount ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle.fill")
-                .font(.system(size: 24))
-                .foregroundColor(profileManager.activeProfile?.id == profile.id ? .accentColor : .secondary)
+            ZStack(alignment: .bottomTrailing) {
+                ProviderLogoView(provider: profile.provider, size: 22)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.primary.opacity(0.05)))
+
+                Text(profile.provider.descriptor.shortName)
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color(nsColor: .windowBackgroundColor)))
+            }
+            .foregroundColor(profileManager.activeProfile?.id == profile.id ? .accentColor : .secondary)
 
             VStack(alignment: .leading, spacing: 4) {
-                if isEditing {
-                    TextField("Profile Name", text: $editedName, onCommit: {
-                        saveProfileName()
-                    })
-                    .textFieldStyle(.roundedBorder)
-                } else {
-                    HStack(spacing: 8) {
-                        Text(profile.name)
-                            .font(.system(size: 14, weight: .medium))
+                HStack(spacing: 8) {
+                    Text(profile.name)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
 
-                        if profileManager.activeProfile?.id == profile.id {
-                            Text("profiles.active_badge".localized)
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor)
-                                .cornerRadius(4)
-                        }
+                    if profileManager.activeProfile?.id == profile.id {
+                        Text("profiles.primary_badge".localized)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor)
+                            .cornerRadius(4)
                     }
                 }
 
                 Text(profileInfo)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            // Actions
             HStack(spacing: 8) {
-                if !isEditing {
-                    // Rename Button
-                    Button(action: {
-                        editedName = profile.name
-                        isEditing = true
-                    }) {
-                        Image(systemName: "pencil")
+                Button {
+                    showingEditor = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .help("profiles.rename".localized)
+
+                if profileManager.activeProfile?.id != profile.id {
+                    Button {
+                        Task {
+                            await profileManager.activateProfile(profile.id)
+                        }
+                    } label: {
+                        Image(systemName: "pin.circle")
                             .font(.system(size: 12))
                     }
                     .buttonStyle(.plain)
-                    .help("profiles.rename".localized)
+                    .help("profiles.make_primary".localized)
+                }
 
-                    // Activate Button (if not active)
-                    if profileManager.activeProfile?.id != profile.id {
-                        Button(action: {
-                            Task {
-                                await profileManager.activateProfile(profile.id)
-                            }
-                        }) {
-                            Image(systemName: "checkmark.circle")
-                                .font(.system(size: 12))
-                        }
-                        .buttonStyle(.plain)
-                        .help("profiles.activate".localized)
-                    }
-
-                    // Delete Button (if not the last profile)
-                    if profileManager.profiles.count > 1 {
-                        Button(action: {
-                            showingDeleteConfirmation = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 12))
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.plain)
-                        .help("profiles.delete".localized)
-                    }
-                } else {
-                    // Save Button
-                    Button(action: {
-                        saveProfileName()
-                    }) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12))
-                            .foregroundColor(.green)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Cancel Button
-                    Button(action: {
-                        isEditing = false
-                    }) {
-                        Image(systemName: "xmark")
+                if profileManager.profiles.count > 1 {
+                    Button {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
                             .font(.system(size: 12))
                             .foregroundColor(.red)
                     }
                     .buttonStyle(.plain)
+                    .help("profiles.delete".localized)
                 }
             }
         }
@@ -479,29 +470,43 @@ struct ProfileRow: View {
         } message: {
             Text(String(format: "profiles.delete_confirm".localized, profile.name))
         }
+        .sheet(isPresented: $showingEditor) {
+            EditProfileSheet(
+                profile: profile,
+                onSave: { name, label in
+                    // Re-read the current profile so a usage refresh that
+                    // landed while the sheet was open is not overwritten.
+                    guard var current = profileManager.profiles.first(where: { $0.id == profile.id }) else { return }
+                    current.name = name
+                    current.nameIsCustomized = true
+                    current.shortLabel = label
+                    profileManager.updateProfile(current)
+                },
+                onReset: {
+                    guard var current = profileManager.profiles.first(where: { $0.id == profile.id }) else { return }
+                    current.nameIsCustomized = false
+                    current.shortLabel = nil
+                    profileManager.updateProfile(current)
+                    AutoDetectAccountsService.shared.syncNow()
+                }
+            )
+        }
     }
 
     private var profileInfo: String {
-        var parts: [String] = []
+        var parts: [String] = [profile.sourceDisplayName]
 
-        parts.append(profile.provider.descriptor.displayName)
-
-        if profile.hasCliAccount {
-            parts.append("profiles.cli_synced".localized)
+        if profile.isAutoDetected {
+            parts.append("profiles.detected_auto".localized)
         }
 
-        parts.append("\("profiles.created".localized) \(profile.createdAt.formatted(date: .abbreviated, time: .omitted))")
+        if let account = profile.detectedAccountText,
+           !profile.name.localizedCaseInsensitiveContains(account) {
+            parts.insert(account, at: 1)
+        }
 
+        parts.append("profiles.created".localized + " " + profile.createdAt.formatted(date: .abbreviated, time: .omitted))
         return parts.joined(separator: " • ")
-    }
-
-    private func saveProfileName() {
-        if !editedName.isEmpty && editedName != profile.name {
-            var updated = profile
-            updated.name = editedName
-            profileManager.updateProfile(updated)
-        }
-        isEditing = false
     }
 
     private func deleteProfile() {
@@ -510,6 +515,134 @@ struct ProfileRow: View {
         } catch {
             // Error handled by ProfileManager
         }
+    }
+}
+
+// MARK: - Edit Profile Sheet
+
+struct EditProfileSheet: View {
+    let profile: Profile
+    let onSave: (String, String?) -> Void
+    let onReset: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var shortLabel: String
+
+    init(
+        profile: Profile,
+        onSave: @escaping (String, String?) -> Void,
+        onReset: @escaping () -> Void
+    ) {
+        self.profile = profile
+        self.onSave = onSave
+        self.onReset = onReset
+        _name = State(initialValue: profile.name)
+        _shortLabel = State(initialValue: profile.shortLabel ?? "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                ProviderLogoView(provider: profile.provider, size: 24)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.primary.opacity(0.05)))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("profiles.edit_title".localized)
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(profile.sourceDisplayName)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text(profile.provider.descriptor.shortName)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("profiles.display_name".localized)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                TextField("profiles.display_name".localized, text: $name)
+                    .textFieldStyle(.roundedBorder)
+                Text("profiles.display_name_hint".localized)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("profiles.menu_bar_label".localized)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                TextField(profile.provider.descriptor.shortName, text: $shortLabel)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: shortLabel) { value in
+                        let cleaned = String(value.uppercased().prefix(3))
+                        if cleaned != value {
+                            shortLabel = cleaned
+                        }
+                    }
+                Text("profiles.menu_bar_label_hint".localized(with: profile.provider.descriptor.shortName))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+
+            if let account = profile.detectedAccountText {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.crop.circle")
+                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("profiles.account".localized)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(account)
+                            .font(.system(size: 11, design: .monospaced))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    Spacer()
+                    if profile.isAutoDetected {
+                        Text("profiles.detected_auto".localized)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+            }
+
+            HStack {
+                Button("profiles.reset_detected".localized) {
+                    onReset()
+                    dismiss()
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button("common.cancel".localized) {
+                    dismiss()
+                }
+                Button("common.save".localized) {
+                    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmedLabel = shortLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+                    onSave(trimmedName, trimmedLabel.isEmpty ? nil : trimmedLabel)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(22)
+        .frame(width: 440)
     }
 }
 

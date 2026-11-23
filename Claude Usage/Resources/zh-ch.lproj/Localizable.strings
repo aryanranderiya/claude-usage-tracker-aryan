@@ -1143,3 +1143,16 @@
 "keep_awake.consent_confirm" = "添加钩子并开启";
 "keep_awake.problem_hooks" = "自动模式无法检测到 Claude Code：~/.claude/settings.json 中缺少钩子。关闭再重新开启自动模式即可重新安装。";
 "keep_awake.problem_listener" = "自动模式无法检测到 Claude Code：本地监听端口被其他应用或另一个 Claude Usage 占用。";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";

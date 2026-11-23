@@ -1138,3 +1138,16 @@
 "keep_awake.consent_confirm" = "Añadir hooks y activar";
 "keep_awake.problem_hooks" = "El modo automático no puede ver Claude Code: faltan sus hooks en ~/.claude/settings.json. Desactiva y vuelve a activar el modo automático para reinstalarlos.";
 "keep_awake.problem_listener" = "El modo automático no puede ver Claude Code: el puerto del receptor local está en uso por otra app u otra copia de Claude Usage.";
+
+// Fork: primary account + editable display identity
+"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
+"profiles.primary_badge" = "Primary";
+"profiles.make_primary" = "Make primary";
+"profiles.edit_title" = "Edit Profile";
+"profiles.display_name" = "Display name";
+"profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
+"profiles.menu_bar_label" = "Menu bar label";
+"profiles.menu_bar_label_hint" = "Short label for compact menu bar icons. Leave blank to use %@.";
+"profiles.account" = "Account";
+"profiles.detected_auto" = "Auto-detected";
+"profiles.reset_detected" = "Reset to detected name";
