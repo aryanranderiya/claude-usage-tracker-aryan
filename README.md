@@ -78,7 +78,7 @@ How it stays out of the way:
 
 - **cswap is the only writer.** The app reads cswap's cached measurements; it never copies credentials, swaps accounts, or refreshes tokens, so it cannot race a `cswap` operation.
 - **OpenCode refreshes its own tokens.** Expired logins are skipped at detection and appear after OpenCode renews them (next `/connect` or normal use).
-- **Codex snapshots are copied** into the tracker profile's Keychain so another switcher's files are never rewritten. The live `auth.json` keeps the original live-read/write-back behavior.
+- **Codex snapshots are read-only copies.** The refresh token is stripped before the snapshot is stored in the tracker's Keychain, so this app can never rotate the token family owned by another switcher. A symlinked `~/.codex/auth.json` (for example a cswap Codex setup) is skipped entirely and left untouched. A regular `auth.json` keeps the original live-read/write-back behavior.
 - Auto-created profiles carry a stable `externalAccountKey`, so relaunching updates the same profile instead of creating duplicates.
 - Multi-profile mode turns on automatically the first time more than one local account is detected; after that the user's choice is kept.
 - Deleting an auto-created profile does not hide its account — it is rediscovered on the next launch. Unselect it in **Settings → Manage Profiles** instead.

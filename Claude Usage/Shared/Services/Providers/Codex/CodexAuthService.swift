@@ -322,6 +322,16 @@ final class CodexAuthService {
     /// auth.json (matching the Codex CLI / CodexBar discipline).
     func writeBackToAuthFile(_ credentials: CodexCredentials) throws {
         let url = authFileURL()
+
+        // Some account switchers (notably cswap builds with Codex support)
+        // manage auth.json as a symlink into their own credential store.
+        // Renaming over it would replace the symlink and break that switcher,
+        // so leave the file entirely alone.
+        if (try? FileManager.default.destinationOfSymbolicLink(atPath: url.path)) != nil {
+            LoggingService.shared.log("Codex: auth.json is a symlink managed by another tool; skipping token write-back")
+            return
+        }
+
         let existingData = try? Data(contentsOf: url)
         guard let serialized = Self.serializeAuthJSON(credentials, mergingInto: existingData.flatMap { String(data: $0, encoding: .utf8) }) else {
             throw AppError(code: .storageEncodingFailed, message: "Failed to serialize Codex credentials", isRecoverable: false)

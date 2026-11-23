@@ -36,6 +36,7 @@ final class AutoDetectAccountsService {
         let manager = ProfileManager.shared
         var profiles = manager.profiles
         var addedProfiles: [Profile] = []
+        var updatedExisting = false
 
         // The pre-existing Anthropic CLI profile already follows the account
         // cswap has active. Do not add a second profile for that same login.
@@ -47,7 +48,15 @@ final class AutoDetectAccountsService {
         )
 
         for account in discovered {
-            if profiles.contains(where: { $0.externalAccountKey == account.key }) {
+            if let index = profiles.firstIndex(where: { $0.externalAccountKey == account.key }) {
+                // Codex snapshot profiles are read-only copies. Re-copy the
+                // current access token so the profile keeps working without
+                // ever refreshing another tool's token family.
+                if let json = account.codexCredentialsJSON,
+                   profiles[index].codexCredentialsJSON != json {
+                    profiles[index].codexCredentialsJSON = json
+                    updatedExisting = true
+                }
                 continue
             }
             if account.provider == .cswap,
@@ -78,8 +87,12 @@ final class AutoDetectAccountsService {
             addedProfiles.append(profile)
         }
 
-        if !addedProfiles.isEmpty {
+        if !addedProfiles.isEmpty || updatedExisting {
             manager.profiles = profiles
+            if let activeId = manager.activeProfile?.id,
+               let refreshed = profiles.first(where: { $0.id == activeId }) {
+                manager.activeProfile = refreshed
+            }
             ProfileStore.shared.saveProfiles(profiles)
             LoggingService.shared.log("AutoDetectAccounts: created \(addedProfiles.count) profile(s) from local tools")
         }
@@ -160,18 +173,35 @@ final class AutoDetectAccountsService {
             let label = credentials.email.map { "Codex · \($0)" }
                 ?? "Codex · \(url.deletingPathExtension().lastPathComponent)"
 
+            let credentialsJSON: String?
+            if live {
+                // The live file is owned by the Codex CLI; the existing
+                // provider reads/refreshes it in place.
+                credentialsJSON = nil
+            } else {
+                // A snapshot belongs to another account switcher. Copy it with
+                // the refresh token removed so this app can never rotate that
+                // token family out from under the other tool.
+                guard let readOnly = Self.readOnlyCodexJSON(data) else { return }
+                credentialsJSON = readOnly
+            }
+
             accounts.append(
                 DiscoveredAccount(
                     provider: .codex,
                     key: live ? "codex:default" : "codex:\(url.standardizedFileURL.path)",
                     name: label,
-                    codexCredentialsJSON: live ? nil : String(data: data, encoding: .utf8),
+                    codexCredentialsJSON: credentialsJSON,
                     refreshInterval: 60
                 )
             )
         }
 
-        if let data = try? Data(contentsOf: liveURL) {
+        // Another switcher (for example a cswap build with Codex support) may
+        // manage auth.json as a symlink. Do not read or write through it: the
+        // file and its token lineage belong to that tool.
+        let liveIsSymlink = (try? FileManager.default.destinationOfSymbolicLink(atPath: liveURL.path)) != nil
+        if !liveIsSymlink, let data = try? Data(contentsOf: liveURL) {
             register(data, at: liveURL, live: true)
         }
 
@@ -189,6 +219,24 @@ final class AutoDetectAccountsService {
         }
 
         return accounts
+    }
+
+    /// Copy a snapshot's credentials with the refresh token removed, so the
+    /// Codex provider can read usage but cannot rotate the token family that
+    /// belongs to the account switcher that owns the snapshot.
+    private static func readOnlyCodexJSON(_ data: Data) -> String? {
+        guard var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return nil
+        }
+        if var tokens = json["tokens"] as? [String: Any] {
+            if tokens["refresh_token"] != nil { tokens["refresh_token"] = "" }
+            if tokens["refreshToken"] != nil { tokens["refreshToken"] = "" }
+            json["tokens"] = tokens
+        }
+        guard let output = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) else {
+            return nil
+        }
+        return String(data: output, encoding: .utf8)
     }
 
     /// Email from a captured Claude Code `oauthAccount` blob, if it has one.
