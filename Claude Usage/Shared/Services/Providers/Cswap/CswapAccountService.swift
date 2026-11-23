@@ -30,7 +30,7 @@ struct CswapAccount: Equatable {
     let scoped: [CswapScopedWindow]
 
     var accountKey: String { "cswap:\(email.lowercased())" }
-    var displayName: String { email }
+    var displayName: String { isDisabled ? "\(email) (disabled)" : email }
 
     var hasAnyUsage: Bool {
         fiveHour != nil || sevenDay != nil || !scoped.isEmpty
@@ -85,8 +85,13 @@ final class CswapAccountService {
                 return true
             }()
 
-            let lastGood = identityMatches ? (row?["lastGood"] as? [String: Any]) : nil
-            let fetchedAt = identityMatches ? UsageDateParser.date(fromUnixSeconds: row?["fetchedAt"]) : nil
+            let lastGood = identityMatches
+                ? ((row?["lastGood"] ?? row?["lastGoodUsage"]) as? [String: Any])
+                : nil
+            let fetchedRaw = row?["fetchedAt"] ?? row?["lastGoodFetchedAt"] ?? row?["usageFetchedAt"]
+            let fetchedAt = identityMatches
+                ? (UsageDateParser.date(fromUnixSeconds: fetchedRaw) ?? UsageDateParser.parse(fetchedRaw))
+                : nil
             var planLabel: String?
             if let organizationUuid,
                let plan = plans["\(email)\n\(organizationUuid)"] as? [String: Any],
