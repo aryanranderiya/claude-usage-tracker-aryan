@@ -3,7 +3,7 @@ import Foundation
 /// Application-wide constants
 enum Constants {
     // App Group identifier for sharing data between app and widgets
-    static let appGroupIdentifier = "group.com.claudeusagetracker.shared"
+    static let appGroupIdentifier = "group.com.aryanranderiya.claudeusagetrackeraryan.shared"
 
     // UserDefaults keys
     enum UserDefaultsKeys {
@@ -72,7 +72,7 @@ enum Constants {
     // Claude Code notch HUD (hook listener + display)
     enum NotchHUD {
         static let host = "127.0.0.1"
-        static let port: UInt16 = 19847
+        static let port: UInt16 = 19848
         /// Base URL prefix used in installed hook URLs; also matched by the
         /// installer when stripping our own (or legacy) hook entries.
         static var baseURL: String { "http://\(host):\(port)" }

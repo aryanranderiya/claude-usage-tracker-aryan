@@ -96,7 +96,7 @@ Monitor at: `https://github.com/hamed-elfayome/Claude-Usage-Tracker/actions`
 
 - Check `CURRENT_PROJECT_VERSION` was incremented (not just `MARKETING_VERSION`)
 - Verify appcast.xml has higher `<sparkle:version>` number
-- Clear app caches: `~/Library/Caches/HamedElfayome.Claude-Usage/`
+- Clear app caches: `~/Library/Caches/com.aryanranderiya.claudeusagetrackeraryan/`
 
 ### Signature validation error
 

@@ -16,8 +16,8 @@ class KeychainService {
 
     /// Keychain item identifiers
     enum KeychainKey: String {
-        case apiSessionKey = "com.claudeusagetracker.api-session-key"
-        case claudeSessionKey = "com.claudeusagetracker.claude-session-key"
+        case apiSessionKey = "com.aryanranderiya.claudeusagetrackeraryan.api-session-key"
+        case claudeSessionKey = "com.aryanranderiya.claudeusagetrackeraryan.claude-session-key"
 
         var service: String {
             return rawValue
@@ -176,7 +176,7 @@ class KeychainService {
     }
 
     /// Single service for all per-profile secrets; the account encodes profile + field.
-    private static let profileSecretsService = "com.claudeusagetracker.profile-credentials"
+    private static let profileSecretsService = "com.aryanranderiya.claudeusagetrackeraryan.profile-credentials"
 
     /// In-memory cache: `loadProfiles()` runs on hot paths (every switch/sync/refresh),
     /// so avoid a SecItemCopyMatching round-trip per field per profile per load.

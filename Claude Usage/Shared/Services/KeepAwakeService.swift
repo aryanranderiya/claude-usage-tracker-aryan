@@ -42,7 +42,7 @@ final class KeepAwakeService: ObservableObject {
     }
 
     // ASCII-only: pmset renders non-ASCII assertion names as mojibake.
-    static let assertionName = "Claude Usage - Keep Awake"
+    static let assertionName = "Claude Usage Tracker Aryan - Keep Awake"
 
     // MARK: - Published state
 

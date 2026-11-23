@@ -33,7 +33,7 @@ final class SupportReminderService {
     /// enough resolution for a monthly cadence even if the Mac never relaunches
     /// the app.
     func start() {
-        // Hidden preview hook: `open "Claude Usage.app" --args -showSupportReminder`
+        // Hidden preview hook: `open "Claude Usage Tracker Aryan.app" --args -showSupportReminder`
         // presents the window immediately, ignoring the cadence (and without
         // advancing the monthly clock).
         if ProcessInfo.processInfo.arguments.contains("-showSupportReminder") {

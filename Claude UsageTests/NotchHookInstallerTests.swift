@@ -35,9 +35,9 @@ final class NotchHookInstallerTests: XCTestCase {
         for (_, value) in hooks {
             for group in (value as? [[String: Any]]) ?? [] {
                 for hook in (group["hooks"] as? [[String: Any]]) ?? [] {
-                    if let url = hook["url"] as? String, url.contains("19847") {
+                    if let url = hook["url"] as? String, url.contains("19848") {
                         urls.append(url)
-                    } else if let command = hook["command"] as? String, command.contains("19847") {
+                    } else if let command = hook["command"] as? String, command.contains("19848") {
                         urls.append(command)
                     }
                 }
@@ -80,7 +80,7 @@ final class NotchHookInstallerTests: XCTestCase {
         var hooks = settings["hooks"] as! [String: Any]
         hooks["SessionStart"] = [["matcher": "", "hooks": [[
             "type": "http",
-            "url": "http://127.0.0.1:19847/hook/testtoken/session-start",
+            "url": "http://127.0.0.1:19848/hook/testtoken/session-start",
             "timeout": 3,
         ]]]]
         settings["hooks"] = hooks
@@ -122,7 +122,7 @@ final class NotchHookInstallerTests: XCTestCase {
         // blocking PermissionRequest hook) as found on real machines.
         func legacyEntry(_ suffix: String, timeout: Int = 3) -> [String: Any] {
             ["matcher": "", "hooks": [["type": "http",
-                                       "url": "http://127.0.0.1:19847/hook/\(suffix)",
+                                       "url": "http://127.0.0.1:19848/hook/\(suffix)",
                                        "timeout": timeout]]]
         }
         try writeSettings([

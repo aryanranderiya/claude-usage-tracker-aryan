@@ -9,7 +9,7 @@
 /* ==================== */
 /* MARK: - App Info */
 /* ==================== */
-"app.name" = "Claude Kullanım Takibi";
+"app.name" = "Claude Usage Tracker Aryan";
 "app.window.main" = "Claude Kullanım";
 "app.window.settings" = "Ayarlar";
 "app.window.github_prompt" = "Claude Kullanım Takibi'ni Destekle";

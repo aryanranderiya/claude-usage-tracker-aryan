@@ -27,6 +27,8 @@
 **Claude Usage Tracker** is a native macOS menu bar app that shows how much of your Claude limits you have used, and when they reset. It tracks the 5-hour session, the weekly limit, per-model limits and API spend, for as many accounts as you have, and it can do the same for OpenAI Codex.
 
 > **Fork changes:** this fork auto-detects accounts from [`cswap`](https://github.com/realiti4/claude-swap), OpenCode Go, and Codex instead of asking you to add them by hand. Detection is read-only: the app never copies, swaps, refreshes, or writes those tools' credentials. See [Local account auto-detection](#local-account-auto-detection-fork).
+>
+> **Fork identity:** the built app is **Claude Usage Tracker Aryan.app**, bundle id `com.aryanranderiya.claudeusagetrackeraryan` (widget: `.widget`). It has its own Keychain services, Application Support folder, UserDefaults domain, and Notch HUD port (`19848`), so it can run beside upstream Claude Usage without sharing profiles, history, credentials, or the hook listener. The Xcode project file is still named `Claude Usage.xcodeproj` to keep upstream paths stable.
 
 <div align="center">
   <img src=".github/settings.gif" alt="A walkthrough of the settings window" width="600">

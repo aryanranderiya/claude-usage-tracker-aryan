@@ -95,9 +95,9 @@ jobs:
           unzip -q releases/Claude-Usage.zip -d releases/temp
 
           # Extract version from app bundle
-          VERSION=$(defaults read "$(pwd)/releases/temp/Claude Usage.app/Contents/Info.plist" CFBundleShortVersionString)
-          BUILD=$(defaults read "$(pwd)/releases/temp/Claude Usage.app/Contents/Info.plist" CFBundleVersion)
-          MIN_OS=$(defaults read "$(pwd)/releases/temp/Claude Usage.app/Contents/Info.plist" LSMinimumSystemVersion)
+          VERSION=$(defaults read "$(pwd)/releases/temp/Claude Usage Tracker Aryan.app/Contents/Info.plist" CFBundleShortVersionString)
+          BUILD=$(defaults read "$(pwd)/releases/temp/Claude Usage Tracker Aryan.app/Contents/Info.plist" CFBundleVersion)
+          MIN_OS=$(defaults read "$(pwd)/releases/temp/Claude Usage Tracker Aryan.app/Contents/Info.plist" LSMinimumSystemVersion)
 
           echo "Detected version: $VERSION (build $BUILD)"
           echo "Minimum macOS: $MIN_OS"

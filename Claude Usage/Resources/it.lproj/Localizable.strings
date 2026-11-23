@@ -9,7 +9,7 @@
 /* ==================== */
 /* MARK: - App Info */
 /* ==================== */
-"app.name" = "Claude Usage Tracker";
+"app.name" = "Claude Usage Tracker Aryan";
 "app.window.main" = "Utilizzo di Claude";
 "app.window.settings" = "Impostazioni";
 "app.window.github_prompt" = "Supporta Claude Usage Tracker";

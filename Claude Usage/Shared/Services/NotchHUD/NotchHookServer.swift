@@ -20,7 +20,7 @@ import Network
 final class NotchHookServer {
     static let shared = NotchHookServer()
 
-    private let queue = DispatchQueue(label: "com.claudeusagetracker.notchhud.server")
+    private let queue = DispatchQueue(label: "com.aryanranderiya.claudeusagetrackeraryan.notchhud.server")
     private var listener: NWListener?
     private var retryCount = 0
     private var desiredRunning = false

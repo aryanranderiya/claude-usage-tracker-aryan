@@ -46,7 +46,7 @@ struct WidgetSnapshot: Codable {
     // MARK: - Location
 
     /// Directory holding the snapshot:
-    /// `~/Library/Application Support/Claude Usage/widget/`
+    /// `~/Library/Application Support/Claude Usage Tracker Aryan/widget/`
     ///
     /// Resolved against the *real* user home (via `getpwuid`) rather than
     /// `NSHomeDirectory()`, because inside the sandboxed widget extension the
@@ -60,7 +60,7 @@ struct WidgetSnapshot: Codable {
             home = NSHomeDirectory()
         }
         return URL(fileURLWithPath: home)
-            .appendingPathComponent("Library/Application Support/Claude Usage/widget", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/Claude Usage Tracker Aryan/widget", isDirectory: true)
     }
 
     static var snapshotURL: URL {

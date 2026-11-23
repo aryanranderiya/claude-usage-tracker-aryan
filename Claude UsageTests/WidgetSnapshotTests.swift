@@ -56,7 +56,7 @@ final class WidgetSnapshotTests: XCTestCase {
         // container translocation.
         let path = WidgetSnapshot.snapshotURL.path
         XCTAssertFalse(path.contains("/Containers/"))
-        XCTAssertTrue(path.hasSuffix("Library/Application Support/Claude Usage/widget/snapshot.json"))
+        XCTAssertTrue(path.hasSuffix("Library/Application Support/Claude Usage Tracker Aryan/widget/snapshot.json"))
     }
 
     // MARK: - Schema version

@@ -1,6 +1,6 @@
 # Desktop widgets
 
-Widgets need macOS 14 or later. To add one, right-click the desktop, choose **Edit Widgets**, and find **Claude Usage**.
+Widgets need macOS 14 or later. To add one, right-click the desktop, choose **Edit Widgets**, and find **Claude Usage Tracker Aryan**.
 
 | Widget | Sizes | Shows |
 |---|---|---|

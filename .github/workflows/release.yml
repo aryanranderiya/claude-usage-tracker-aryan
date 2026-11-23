@@ -93,7 +93,7 @@ jobs:
 
       - name: Sign App Bundle
         run: |
-          APP_PATH="build/Build/Products/Release/Claude Usage.app"
+          APP_PATH="build/Build/Products/Release/Claude Usage Tracker Aryan.app"
 
           echo "Using signing identity: $SIGNING_IDENTITY"
           echo "Signing Sparkle framework components in correct order..."
@@ -158,7 +158,7 @@ jobs:
 
       - name: Verify Code Signature
         run: |
-          APP_PATH="build/Build/Products/Release/Claude Usage.app"
+          APP_PATH="build/Build/Products/Release/Claude Usage Tracker Aryan.app"
 
           echo "Verifying code signature..."
           # Verify signature is valid
@@ -182,7 +182,7 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
-          APP_PATH="build/Build/Products/Release/Claude Usage.app"
+          APP_PATH="build/Build/Products/Release/Claude Usage Tracker Aryan.app"
 
           echo "Creating ZIP for notarization..."
           ditto -c -k --keepParent "$APP_PATH" "notarization.zip"
@@ -217,12 +217,12 @@ jobs:
 
           # Copy app bundle (preserving attributes and signatures)
           echo "Copying signed and notarized app bundle..."
-          cp -pR "build/Build/Products/Release/Claude Usage.app" release/
+          cp -pR "build/Build/Products/Release/Claude Usage Tracker Aryan.app" release/
 
           # Create ZIP archive using ditto (preserves code signatures and notarization)
           echo "Creating release ZIP..."
           cd release
-          ditto -c -k --keepParent "Claude Usage.app" "Claude-Usage.zip"
+          ditto -c -k --keepParent "Claude Usage Tracker Aryan.app" "Claude-Usage.zip"
 
           # Generate SHA256 checksum
           shasum -a 256 "Claude-Usage.zip" > "Claude-Usage.zip.sha256"

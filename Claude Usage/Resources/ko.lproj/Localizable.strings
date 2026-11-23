@@ -9,7 +9,7 @@
 /* ==================== */
 /* MARK: - App Info */
 /* ==================== */
-"app.name" = "Claude 사용량 추적기";
+"app.name" = "Claude Usage Tracker Aryan";
 "app.window.main" = "Claude 사용량";
 "app.window.settings" = "설정";
 "app.window.github_prompt" = "Claude Usage Tracker 지원하기";
