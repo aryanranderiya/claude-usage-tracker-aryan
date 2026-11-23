@@ -14,6 +14,17 @@ import Foundation
 enum Provider: String, Codable, CaseIterable, Equatable {
     case anthropic
     case codex
+    /// Claude accounts managed by the local `cswap` (claude-swap) tool.
+    /// Read-only: usage comes from cswap's own cache; credentials are never
+    /// copied or refreshed by this app.
+    case cswap
+    /// OpenCode Go / Console accounts discovered from the local OpenCode store.
+    case opencode
+
+    /// Providers a user can create by hand. `cswap` and `opencode` profiles are
+    /// created automatically from local state, so they are not offered in the
+    /// "new profile" picker.
+    static let userCreatable: [Provider] = [.anthropic, .codex]
 
     var descriptor: ProviderDescriptor {
         ProviderRegistry.descriptor(for: self)

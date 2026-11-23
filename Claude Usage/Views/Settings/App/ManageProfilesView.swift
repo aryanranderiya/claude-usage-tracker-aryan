@@ -547,7 +547,7 @@ struct CreateProfileSheet: View {
                 // Provider cards from the registry — new providers appear here
                 // automatically once registered.
                 HStack(spacing: 8) {
-                    ForEach(Provider.allCases, id: \.self) { provider in
+                    ForEach(Provider.userCreatable, id: \.self) { provider in
                         ProviderChoiceCard(
                             provider: provider,
                             isSelected: selectedProvider == provider

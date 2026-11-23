@@ -61,6 +61,9 @@ struct SetupWizardView: View {
                         setupMode = .loading
                     case .codex:
                         setupMode = .codexSetup
+                    case .cswap, .opencode:
+                        // Auto-detected providers are never offered here.
+                        break
                     }
                 },
                 onSkip: { dismiss() }
@@ -1060,7 +1063,7 @@ struct ProviderChoiceSetupView: View {
                 }
 
                 HStack(spacing: 16) {
-                    ForEach(Provider.allCases, id: \.self) { provider in
+                    ForEach(Provider.userCreatable, id: \.self) { provider in
                         Button {
                             onSelect(provider)
                         } label: {

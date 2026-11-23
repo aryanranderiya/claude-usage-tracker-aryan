@@ -120,6 +120,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Load profiles into ProfileManager (synchronously)
         ProfileManager.shared.loadProfiles()
 
+        // Add profiles for accounts already managed by cswap, OpenCode, or
+        // Codex so the first refresh has something to show without setup.
+        AutoDetectAccountsService.shared.syncNow()
+
         // Regenerate installed statusline scripts so they pick up format changes
         // across app updates and re-embed fresh Cloudflare clearance cookies.
         try? StatuslineService.shared.updateScriptsIfInstalled()

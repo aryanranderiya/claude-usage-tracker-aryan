@@ -49,6 +49,12 @@ struct Profile: Codable, Identifiable, Equatable {
     /// nil when no launcher is installed.
     var terminalLauncherSlug: String?
 
+    /// Stable identifier for an account discovered from local tooling
+    /// (cswap slot email, OpenCode account, Codex snapshot). Auto-detection
+    /// uses it to update the existing profile instead of creating duplicates.
+    /// Not a secret; safe to persist in the plist.
+    var externalAccountKey: String?
+
     /// Serialized `oauthAccount` object from Claude Code's `.claude.json` config file.
     /// Captured at sync time and re-applied during profile switches so that
     /// Claude Code's `/status` command shows the correct account for the active
@@ -98,6 +104,7 @@ struct Profile: Codable, Identifiable, Equatable {
         cliAccountSyncedAt: Date? = nil,
         customKeychainServiceName: String? = nil,
         terminalLauncherSlug: String? = nil,
+        externalAccountKey: String? = nil,
         oauthAccountJSON: String? = nil,
         claudeUsage: ClaudeUsage? = nil,
         apiUsage: APIUsage? = nil,
@@ -125,6 +132,7 @@ struct Profile: Codable, Identifiable, Equatable {
         self.cliAccountSyncedAt = cliAccountSyncedAt
         self.customKeychainServiceName = customKeychainServiceName
         self.terminalLauncherSlug = terminalLauncherSlug
+        self.externalAccountKey = externalAccountKey
         self.oauthAccountJSON = oauthAccountJSON
         self.claudeUsage = claudeUsage
         self.apiUsage = apiUsage
@@ -156,6 +164,7 @@ struct Profile: Codable, Identifiable, Equatable {
         case hasCliAccount, cliAccountSyncedAt
         case customKeychainServiceName
         case terminalLauncherSlug
+        case externalAccountKey
         case oauthAccountJSON
         case claudeUsage, apiUsage
         case iconConfig
@@ -187,6 +196,7 @@ struct Profile: Codable, Identifiable, Equatable {
         cliAccountSyncedAt = try c.decodeIfPresent(Date.self, forKey: .cliAccountSyncedAt)
         customKeychainServiceName = try c.decodeIfPresent(String.self, forKey: .customKeychainServiceName)
         terminalLauncherSlug = try c.decodeIfPresent(String.self, forKey: .terminalLauncherSlug)
+        externalAccountKey = try c.decodeIfPresent(String.self, forKey: .externalAccountKey)
         oauthAccountJSON = try c.decodeIfPresent(String.self, forKey: .oauthAccountJSON)
         // Usage values are re-fetchable caches — a malformed cache (e.g. written
         // by a different app version) must degrade to nil, never fail the
@@ -224,6 +234,7 @@ struct Profile: Codable, Identifiable, Equatable {
         try c.encodeIfPresent(cliAccountSyncedAt, forKey: .cliAccountSyncedAt)
         try c.encodeIfPresent(customKeychainServiceName, forKey: .customKeychainServiceName)
         try c.encodeIfPresent(terminalLauncherSlug, forKey: .terminalLauncherSlug)
+        try c.encodeIfPresent(externalAccountKey, forKey: .externalAccountKey)
         try c.encodeIfPresent(oauthAccountJSON, forKey: .oauthAccountJSON)
         try c.encodeIfPresent(claudeUsage, forKey: .claudeUsage)
         try c.encodeIfPresent(apiUsage, forKey: .apiUsage)
@@ -257,6 +268,8 @@ struct Profile: Codable, Identifiable, Equatable {
             return hasClaudeAI || hasAPIConsole || hasValidCLIOAuth
         case .codex:
             return codexCredentialsJSON != nil || CodexAuthService.shared.authFileExists()
+        case .cswap, .opencode:
+            return externalAccountKey != nil
         }
     }
 
@@ -272,6 +285,8 @@ struct Profile: Codable, Identifiable, Equatable {
             return hasClaudeAI || hasAPIConsole || cliCredentialsJSON != nil || customKeychainServiceName != nil
         case .codex:
             return codexCredentialsJSON != nil || CodexAuthService.shared.authFileExists()
+        case .cswap, .opencode:
+            return externalAccountKey != nil
         }
     }
 }

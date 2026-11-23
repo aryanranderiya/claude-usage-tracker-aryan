@@ -58,6 +58,46 @@ enum ProviderRegistry {
             primaryWindowLabelKey: "usage.window.session",
             secondaryWindowLabelKey: "usage.window.weekly"
         ),
+        .cswap: ProviderDescriptor(
+            id: .cswap,
+            displayName: "cswap",
+            logoAssetName: "ProviderLogoAnthropic",
+            logoSystemSymbolFallback: "arrow.triangle.2.circlepath",
+            statusPageURL: URL(string: "https://status.claude.com/api/v2/status.json"),
+            capabilities: ProviderCapabilities(
+                tokenCounts: false,
+                perModelBreakdown: true,
+                consoleBilling: false,
+                cliAccountSync: false,
+                autoStartSession: false,
+                overageChecks: false,
+                personalSpend: false,
+                credits: false
+            ),
+            credentialSections: [],
+            primaryWindowLabelKey: "usage.window.session",
+            secondaryWindowLabelKey: "usage.window.weekly"
+        ),
+        .opencode: ProviderDescriptor(
+            id: .opencode,
+            displayName: "OpenCode",
+            logoAssetName: "ProviderLogoOpenCode",
+            logoSystemSymbolFallback: "chevron.left.forwardslash.chevron.right",
+            statusPageURL: nil,
+            capabilities: ProviderCapabilities(
+                tokenCounts: false,
+                perModelBreakdown: false,
+                consoleBilling: false,
+                cliAccountSync: false,
+                autoStartSession: false,
+                overageChecks: false,
+                personalSpend: false,
+                credits: false
+            ),
+            credentialSections: [],
+            primaryWindowLabelKey: "usage.window.session",
+            secondaryWindowLabelKey: "usage.window.weekly"
+        ),
     ]
 
     static func descriptor(for provider: Provider) -> ProviderDescriptor {
@@ -75,6 +115,10 @@ enum ProviderRegistry {
             return AnthropicUsageProvider.shared
         case .codex:
             return CodexUsageProvider.shared
+        case .cswap:
+            return CswapUsageProvider.shared
+        case .opencode:
+            return OpenCodeUsageProvider.shared
         }
     }
 }

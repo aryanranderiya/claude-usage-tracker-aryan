@@ -26,6 +26,8 @@
 
 **Claude Usage Tracker** is a native macOS menu bar app that shows how much of your Claude limits you have used, and when they reset. It tracks the 5-hour session, the weekly limit, per-model limits and API spend, for as many accounts as you have, and it can do the same for OpenAI Codex.
 
+> **Fork changes:** this fork auto-detects accounts from [`cswap`](https://github.com/realiti4/claude-swap), OpenCode Go, and Codex instead of asking you to add them by hand. Detection is read-only: the app never copies, swaps, refreshes, or writes those tools' credentials. See [Local account auto-detection](#local-account-auto-detection-fork).
+
 <div align="center">
   <img src=".github/settings.gif" alt="A walkthrough of the settings window" width="600">
   <img src=".github/icon.jpg" alt="Menu bar icon" height="180">
@@ -61,6 +63,31 @@ Pick whichever fits how you use Claude:
 Click the menu bar icon to see your usage. The [setup guide](docs/setup.md) covers each path step by step, including API Console billing.
 
 The terminal statusline needs a claude.ai sign-in even if the app itself runs on your Claude Code login.
+
+## Local account auto-detection (fork)
+
+At launch the app looks for accounts in the tools you already use and creates one tracker profile per account. Accounts that disappear from a tool are left in place — the app never deletes profiles or history on its own.
+
+| Source | Read from | Shown as |
+|---|---|---|
+| `cswap` | `~/.claude-swap-backup/sequence.json` + `cache/usage.json` + `cache/subscription_plans.json` (Linux: `$XDG_DATA_HOME/claude-swap` or `~/.local/share/claude-swap`) | One profile per cswap account, with its 5h/7d/per-model windows and plan. |
+| OpenCode | `~/.local/share/opencode/opencode.db` (`credential` table); v1 `auth.json` fallback | One profile per unexpired OpenCode Console login. Go usage comes from OpenCode's `inference/go/v1/usage` endpoint (5h, weekly, monthly). |
+| Codex | `~/.codex/auth.json` plus snapshots in `~/.codex/accounts/**/*.json` | One profile per login/snapshot, using the existing Codex usage provider. |
+
+How it stays out of the way:
+
+- **cswap is the only writer.** The app reads cswap's cached measurements; it never copies credentials, swaps accounts, or refreshes tokens, so it cannot race a `cswap` operation.
+- **OpenCode refreshes its own tokens.** Expired logins are skipped at detection and appear after OpenCode renews them (next `/connect` or normal use).
+- **Codex snapshots are copied** into the tracker profile's Keychain so another switcher's files are never rewritten. The live `auth.json` keeps the original live-read/write-back behavior.
+- Auto-created profiles carry a stable `externalAccountKey`, so relaunching updates the same profile instead of creating duplicates.
+- Multi-profile mode turns on automatically the first time more than one local account is detected; after that the user's choice is kept.
+- Deleting an auto-created profile does not hide its account — it is rediscovered on the next launch. Unselect it in **Settings → Manage Profiles** instead.
+
+Build from source with Xcode 16 or later. The source folders are synchronized groups, so the added provider files need no `.pbxproj` edits:
+
+```bash
+open "Claude Usage.xcodeproj"
+```
 
 ## What it does
 
