@@ -40,6 +40,13 @@ struct CswapAccount: Equatable {
 /// Reads cswap's per-account state without invoking the CLI. The paths mirror
 /// cswap's own resolution: `~/.claude-swap-backup` on macOS/Windows and
 /// `$XDG_DATA_HOME/claude-swap` (default `~/.local/share/claude-swap`) on Linux.
+///
+/// Safety contract: this service opens exactly three files — `sequence.json`,
+/// `cache/usage.json`, and `cache/subscription_plans.json` — and only for
+/// reading. It never touches `credentials/`, `configs/`, `settings.json`, the
+/// keychain, `~/.claude`, or cswap's locks, and it never runs `cswap`. A token
+/// can therefore never be copied, refreshed, rotated, or invalidated by this
+/// app; cswap remains the sole owner of its accounts.
 final class CswapAccountService {
     static let shared = CswapAccountService()
 
