@@ -27,6 +27,11 @@ struct ClaudeUsage: Codable, Equatable {
     var weeklyLimit: Int
     var weeklyPercentage: Double
     var weeklyResetTime: Date
+    /// OpenCode Go reports a third monthly allowance window. Other providers
+    /// leave this false; the fields are additive so existing caches decode.
+    var hasMonthlyLimit: Bool = false
+    var monthlyPercentage: Double = 0
+    var monthlyResetTime: Date?
 
     // Weekly data (Opus only)
     var opusWeeklyTokensUsed: Int
@@ -149,6 +154,7 @@ extension ClaudeUsage {
     private enum CodingKeys: String, CodingKey {
         case sessionTokensUsed, sessionLimit, sessionPercentage, sessionResetTime, hasSessionLimit, hasWeeklyLimit
         case weeklyTokensUsed, weeklyLimit, weeklyPercentage, weeklyResetTime
+        case hasMonthlyLimit, monthlyPercentage, monthlyResetTime
         case opusWeeklyTokensUsed, opusWeeklyPercentage
         case sonnetWeeklyTokensUsed, sonnetWeeklyPercentage, sonnetWeeklyResetTime
         case designWeeklyTokensUsed, designWeeklyPercentage, designWeeklyResetTime
@@ -173,6 +179,9 @@ extension ClaudeUsage {
             weeklyLimit: try c.decodeIfPresent(Int.self, forKey: .weeklyLimit) ?? 0,
             weeklyPercentage: try c.decodeIfPresent(Double.self, forKey: .weeklyPercentage) ?? 0,
             weeklyResetTime: try c.decodeIfPresent(Date.self, forKey: .weeklyResetTime) ?? Date(),
+            hasMonthlyLimit: try c.decodeIfPresent(Bool.self, forKey: .hasMonthlyLimit) ?? false,
+            monthlyPercentage: try c.decodeIfPresent(Double.self, forKey: .monthlyPercentage) ?? 0,
+            monthlyResetTime: try c.decodeIfPresent(Date.self, forKey: .monthlyResetTime),
             opusWeeklyTokensUsed: try c.decodeIfPresent(Int.self, forKey: .opusWeeklyTokensUsed) ?? 0,
             opusWeeklyPercentage: try c.decodeIfPresent(Double.self, forKey: .opusWeeklyPercentage) ?? 0,
             sonnetWeeklyTokensUsed: try c.decodeIfPresent(Int.self, forKey: .sonnetWeeklyTokensUsed) ?? 0,

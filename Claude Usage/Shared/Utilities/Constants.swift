@@ -157,6 +157,7 @@ enum Constants {
 
     // Session window (5 hours in seconds)
     static let sessionWindow: TimeInterval = 5 * 60 * 60
+    static let monthlyWindow: TimeInterval = 30 * 24 * 60 * 60
 
     // Weekly window (7 days in seconds)
     static let weeklyWindow: TimeInterval = 7 * 24 * 60 * 60
@@ -207,7 +208,7 @@ enum Constants {
     // Window Sizes
     enum WindowSizes {
         static let settingsWindow = NSSize(width: 720, height: 750)
-        static let popoverSize = NSSize(width: 360, height: 640)
+        static let popoverSize = NSSize(width: 360, height: 760)
         /// Height of the system NSPopover arrow (macOS standard ~13pt)
         static let popoverArrowHeight: CGFloat = 13
     }

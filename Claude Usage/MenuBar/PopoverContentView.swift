@@ -157,7 +157,7 @@ struct PopoverContentView: View {
             ProfilesOverviewView(onManageProfiles: onPreferences)
         }
         .padding(.bottom, 8)
-        .frame(width: 360)
+        .frame(width: 360, height: 760)
         .background(VisualEffectBackground())
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.96, anchor: .top)
@@ -601,6 +601,21 @@ struct SmartUsageDashboard: View {
                     showRemaining: showRemainingPercentage,
                     resetTime: usage.sessionResetTime,
                     periodDuration: Constants.sessionWindow,
+                    showTimeMarker: showTimeMarker,
+                    showPaceMarker: showPaceMarker,
+                    usePaceColoring: usePaceColoring,
+                    timeDisplay: timeDisplay
+                )
+            }
+
+            if usage.hasMonthlyLimit {
+                UsageRow(
+                    title: "menubar.monthly_limit".localized,
+                    subtitle: "menubar.monthly_window".localized,
+                    usedPercentage: usage.monthlyPercentage,
+                    showRemaining: showRemainingPercentage,
+                    resetTime: usage.monthlyResetTime,
+                    periodDuration: Constants.monthlyWindow,
                     showTimeMarker: showTimeMarker,
                     showPaceMarker: showPaceMarker,
                     usePaceColoring: usePaceColoring,

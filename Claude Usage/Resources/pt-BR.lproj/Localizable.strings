@@ -1173,3 +1173,8 @@
 
 // Fork: all-accounts popover
 "popover.accounts_title" = "Accounts";
+
+// Fork: OpenCode monthly allowance
+"menubar.monthly" = "Monthly";
+"menubar.monthly_limit" = "Monthly limit";
+"menubar.monthly_window" = "Monthly allowance";

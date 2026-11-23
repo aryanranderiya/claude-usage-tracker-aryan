@@ -4,8 +4,8 @@ import Foundation
 ///
 /// OpenCode's own `opencode.allowance` accounting exposes three meters:
 /// a 5-hour `rolling` window, a Monday-reset `weekly` window, and the
-/// `monthly` allowance. The app's two-window model maps the first two; the
-/// monthly percentage is carried in the plan badge.
+/// `monthly` allowance. They map onto the session, weekly, and monthly
+/// fields of `ClaudeUsage` respectively.
 final class OpenCodeUsageProvider: UsageProviderService {
     static let shared = OpenCodeUsageProvider()
 
@@ -60,10 +60,14 @@ final class OpenCodeUsageProvider: UsageProviderService {
         }
 
         if let monthly = snapshot.monthly {
-            usage.planType = "Go · \(Int(monthly.percent.rounded()))% month"
-        } else {
-            usage.planType = "Go"
+            usage.hasMonthlyLimit = true
+            usage.monthlyPercentage = monthly.percent
+            usage.monthlyResetTime = monthly.resetsAt
+                ?? previous?.monthlyResetTime
+                ?? now.addingTimeInterval(Constants.monthlyWindow)
         }
+
+        usage.planType = "Go"
 
         usage.lastUpdated = now
         usage.userTimezone = .current

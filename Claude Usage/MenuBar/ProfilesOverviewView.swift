@@ -81,7 +81,7 @@ struct ProfilesOverviewView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
         }
-        .scrollIndicators(.hidden)
+        .scrollIndicators(.never)
     }
 
     private static func title(for provider: Provider) -> String {
@@ -264,6 +264,20 @@ private struct ProfileSummaryCard: View {
                     reset: usage.weeklyResetTime,
                     duration: Constants.weeklyWindow,
                     excludeWeekends: profile.iconConfig.excludeWeekendsFromWeeklyPace,
+                    showsReset: true
+                )
+            )
+        }
+
+        if usage.hasMonthlyLimit {
+            metrics.append(
+                CompactMetric(
+                    id: "monthly",
+                    label: "menubar.monthly".localized,
+                    percentage: usage.monthlyPercentage,
+                    reset: usage.monthlyResetTime ?? Date().addingTimeInterval(Constants.monthlyWindow),
+                    duration: Constants.monthlyWindow,
+                    excludeWeekends: false,
                     showsReset: true
                 )
             )

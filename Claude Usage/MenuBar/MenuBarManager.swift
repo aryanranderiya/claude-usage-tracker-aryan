@@ -416,13 +416,9 @@ class MenuBarManager: NSObject, ObservableObject {
         let newPopover = NSPopover()
         newPopover.contentSize = Constants.WindowSizes.popoverSize
         newPopover.behavior = .semitransient
-        // Disabled to avoid an infinite layout-recursion crash on macOS 26/27.
-        // The hosting controller's sizingOptions/preferredContentSize (PR #200)
-        // keep the popover sized to its content; with animation on, each animated
-        // resize re-triggers layout (updateAnimatedWindowSize -> setFrame -> layout)
-        // and never converges, overflowing the main-thread stack. Disabling only the
-        // animation breaks the loop while preserving content sizing/positioning.
-        // See Discussion #64.
+        // Fixed-size popover: expanding an account scrolls inside the list and
+        // never resizes the window. Animations stay disabled on macOS 26/27
+        // because the animated resize path recurses (Discussion #64).
         newPopover.animates = false
         newPopover.delegate = self
         newPopover.contentViewController = createContentViewController()
@@ -488,13 +484,9 @@ class MenuBarManager: NSObject, ObservableObject {
         let popover = NSPopover()
         popover.contentSize = Constants.WindowSizes.popoverSize
         popover.behavior = .semitransient  // Changed to allow detaching
-        // Disabled to avoid an infinite layout-recursion crash on macOS 26/27.
-        // The hosting controller's sizingOptions/preferredContentSize (PR #200)
-        // keep the popover sized to its content; with animation on, each animated
-        // resize re-triggers layout (updateAnimatedWindowSize -> setFrame -> layout)
-        // and never converges, overflowing the main-thread stack. Disabling only the
-        // animation breaks the loop while preserving content sizing/positioning.
-        // See Discussion #64.
+        // Fixed-size popover: expanding an account scrolls inside the list and
+        // never resizes the window. Animations stay disabled on macOS 26/27
+        // because the animated resize path recurses (Discussion #64).
         popover.animates = false
         popover.delegate = self
 
@@ -517,7 +509,10 @@ class MenuBarManager: NSObject, ObservableObject {
 
         let hostingController = NSHostingController(rootView: contentView)
         hostingController.preferredContentSize = Constants.WindowSizes.popoverSize
-        hostingController.sizingOptions = .preferredContentSize
+        // Fixed popover surface: expanding a card must scroll inside the list,
+        // never resize the popover window or shift its contents.
+        hostingController.sizingOptions = []
+        hostingController.view.frame = NSRect(origin: .zero, size: Constants.WindowSizes.popoverSize)
         return hostingController
     }
 
@@ -1883,10 +1878,9 @@ extension MenuBarManager: NSPopoverDelegate {
         // Stop monitoring for outside clicks when detaching
         stopMonitoringForOutsideClicks()
 
-        // Create content view controller sized for a window (not a popover).
-        // We don't use createContentViewController() here because its
-        // preferredContentSize/sizingOptions (added by PR #200 for popover
-        // positioning) conflict with the window's layout constraints.
+        // The detached window uses the same fixed-size SwiftUI content. It
+        // builds its own hosting controller because NSPopover sizing does not
+        // apply to a regular NSPanel.
         let contentView = PopoverContentView(
             manager: self,
             onRefresh: { [weak self] in self?.refreshAllProfilesForPopover(force: true) },
@@ -1898,7 +1892,7 @@ extension MenuBarManager: NSPopoverDelegate {
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 760),
             styleMask: [.titled, .closable, .nonactivatingPanel, .hudWindow],
             backing: .buffered,
             defer: false
@@ -1908,7 +1902,7 @@ extension MenuBarManager: NSPopoverDelegate {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
-        window.setContentSize(NSSize(width: 360, height: 640))
+        window.setContentSize(NSSize(width: 360, height: 760))
         window.isReleasedWhenClosed = false
         window.level = .floating
         // Allow a torn-off popover to stay on a full-screen app's Space.
