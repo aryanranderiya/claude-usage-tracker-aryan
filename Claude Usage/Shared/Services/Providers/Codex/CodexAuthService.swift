@@ -170,6 +170,16 @@ final class CodexAuthService {
             return credentials
         }
 
+        // A symlinked auth.json belongs to another account switcher. Do not
+        // even attempt a refresh: OpenAI rotates refresh tokens, so a refresh
+        // here would invalidate the token that switcher is holding — before
+        // any write-back decision is reached.
+        if profile.codexCredentialsJSON == nil,
+           (try? FileManager.default.destinationOfSymbolicLink(atPath: authFileURL().path)) != nil {
+            LoggingService.shared.log("Codex: auth.json is a symlink managed by another tool; refusing to refresh its token")
+            return credentials
+        }
+
         // Serialize refreshes per refresh token: OpenAI treats a second POST
         // with the same rotated refresh token as reuse and revokes the whole
         // token family — which would log out the user's Codex CLI. Concurrent
