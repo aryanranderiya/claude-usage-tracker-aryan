@@ -187,8 +187,6 @@ struct SmartHeader: View {
     let onRefresh: () -> Void
     let onPreferences: () -> Void
 
-    @StateObject private var profileManager = ProfileManager.shared
-
     private var statusColor: Color {
         switch status.indicator.color {
         case .green: return .adaptiveGreen
@@ -200,49 +198,29 @@ struct SmartHeader: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            if let profile = profileManager.activeProfile {
-                ProviderLogoView(provider: profile.provider, size: 20)
-                    .foregroundColor(profile.provider.brandTint)
-                    .frame(width: 26, height: 26)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("profiles.primary_badge".localized)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundColor(.secondary)
-
-                Text(profileManager.activeProfile?.name ?? "app.name".localized)
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("popover.accounts_title".localized)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .minimumScaleFactor(0.82)
-                    .allowsTightening(true)
 
-                HStack(spacing: 4) {
-                    Text(profileManager.activeProfile?.sourceDisplayName ?? "")
-                    Text("·")
-                    Button(action: {
-                        if let url = URL(string: "https://status.claude.com") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(statusColor)
-                                .frame(width: 5, height: 5)
-                            Text(status.description)
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
+                Button(action: {
+                    if let url = URL(string: "https://status.claude.com") {
+                        NSWorkspace.shared.open(url)
                     }
-                    .buttonStyle(.plain)
-                    .help("Click to open status.claude.com")
+                }) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 5, height: 5)
+                        Text(status.description)
+                            .font(.system(size: 9.5))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
-                .font(.system(size: 9.5))
-                .foregroundColor(.secondary)
+                .buttonStyle(.plain)
+                .help("Click to open status.claude.com")
             }
 
             Spacer(minLength: 4)
@@ -265,7 +243,7 @@ struct SmartHeader: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 11)
     }
 }
 
@@ -933,12 +911,8 @@ struct UsageRow: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
-        )
+        .padding(.horizontal, 0)
+        .padding(.vertical, 6)
     }
 
     private func resetTimeText(for reset: Date) -> String {

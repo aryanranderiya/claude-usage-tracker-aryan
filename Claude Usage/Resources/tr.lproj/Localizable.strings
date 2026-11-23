@@ -1162,3 +1162,6 @@
 "profiles.account" = "Account";
 "profiles.detected_auto" = "Auto-detected";
 "profiles.reset_detected" = "Reset to detected name";
+
+// Fork: all-accounts popover
+"popover.accounts_title" = "Accounts";

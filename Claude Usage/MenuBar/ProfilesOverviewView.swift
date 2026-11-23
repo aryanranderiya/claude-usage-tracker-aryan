@@ -30,20 +30,16 @@ struct ProfilesOverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(groups) { group in
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 7) {
-                            ProviderLogoView(provider: group.provider, size: 11)
-                                .foregroundColor(group.provider.brandTint)
-
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
                             Text(group.title)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.secondary)
+                                .fixedSize()
 
-                            Text("\(group.profiles.count)")
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary.opacity(0.55))
-
-                            Spacer()
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.06))
+                                .frame(height: 1)
                         }
                         .padding(.horizontal, 2)
 
@@ -58,10 +54,6 @@ struct ProfilesOverviewView: View {
                                 }
                             }
 
-                            if profile.id != group.profiles.last?.id {
-                                Divider()
-                                    .padding(.leading, 34)
-                            }
                         }
                     }
                 }
@@ -115,6 +107,7 @@ private struct ProfileSummaryCard: View {
     let onMakePrimary: () -> Void
 
     @State private var isExpanded = false
+    @State private var isHovered = false
 
     private var usage: ClaudeUsage? {
         profile.claudeUsage
@@ -141,21 +134,22 @@ private struct ProfileSummaryCard: View {
                         .minimumScaleFactor(0.86)
                         .allowsTightening(true)
 
-                    HStack(spacing: 5) {
-                        if isPrimary {
-                            Text("profiles.primary_badge".localized)
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.accentColor)
-                        }
+                    if isPrimary || planText != nil {
+                        HStack(spacing: 5) {
+                            if isPrimary {
+                                Text("profiles.primary_badge".localized)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.accentColor)
+                            }
 
-                        Text(profile.sourceDisplayName)
-                        if let planText {
-                            Text("· \(planText)")
+                            if let planText {
+                                Text(planText)
+                                    .font(.system(size: 9.5))
+                                    .foregroundColor(.secondary)
+                            }
                         }
+                        .lineLimit(1)
                     }
-                    .font(.system(size: 9.5))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
                 }
 
                 Spacer(minLength: 6)
@@ -169,18 +163,11 @@ private struct ProfileSummaryCard: View {
                 .help("profiles.make_primary".localized)
                 .disabled(isPrimary)
 
-                Button {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .buttonStyle(.plain)
-                .help(isExpanded ? "Hide details" : "Show details")
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .frame(width: 12)
             }
 
             if let usage {
@@ -204,7 +191,25 @@ private struct ProfileSummaryCard: View {
                 )
             }
         }
-        .padding(.vertical, 7)
+        .padding(12)
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.primary.opacity(isPrimary ? 0.07 : (isHovered ? 0.05 : 0.035)))
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) {
+                isHovered = hovering
+            }
+        }
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded.toggle()
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .help(isExpanded ? "Collapse account details" : "Expand account details")
     }
 
     @ViewBuilder
@@ -220,12 +225,17 @@ private struct ProfileSummaryCard: View {
                 ForEach(metrics) { metric in
                     CompactMetricColumn(
                         metric: metric,
-                        showRemaining: showRemaining
+                        showRemaining: showRemaining,
+                        usePaceColoring: profile.iconConfig.usePaceColoring
                     )
                 }
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    private static func sameReset(_ lhs: Date, _ rhs: Date) -> Bool {
+        abs(lhs.timeIntervalSince(rhs)) < 60
     }
 
     private func compactMetricModels(_ usage: ClaudeUsage) -> [CompactMetric] {
@@ -237,7 +247,10 @@ private struct ProfileSummaryCard: View {
                     id: "5h",
                     label: "5h",
                     percentage: usage.effectiveSessionPercentage,
-                    reset: usage.sessionResetTime
+                    reset: usage.sessionResetTime,
+                    duration: Constants.sessionWindow,
+                    excludeWeekends: false,
+                    showsReset: true
                 )
             )
         }
@@ -248,7 +261,10 @@ private struct ProfileSummaryCard: View {
                     id: "7d",
                     label: "7d",
                     percentage: usage.weeklyPercentage,
-                    reset: usage.weeklyResetTime
+                    reset: usage.weeklyResetTime,
+                    duration: Constants.weeklyWindow,
+                    excludeWeekends: profile.iconConfig.excludeWeekendsFromWeeklyPace,
+                    showsReset: true
                 )
             )
         }
@@ -259,7 +275,13 @@ private struct ProfileSummaryCard: View {
                     id: "fable",
                     label: "Fable",
                     percentage: usage.fableWeeklyPercentage,
-                    reset: usage.fableWeeklyResetTime ?? usage.weeklyResetTime
+                    reset: usage.fableWeeklyResetTime ?? usage.weeklyResetTime,
+                    duration: Constants.weeklyWindow,
+                    excludeWeekends: profile.iconConfig.excludeWeekendsFromWeeklyPace,
+                    showsReset: !Self.sameReset(
+                        usage.fableWeeklyResetTime ?? usage.weeklyResetTime,
+                        usage.weeklyResetTime
+                    )
                 )
             )
         }
@@ -273,20 +295,49 @@ private struct CompactMetric: Identifiable {
     let label: String
     let percentage: Double
     let reset: Date
+    let duration: TimeInterval
+    let excludeWeekends: Bool
+    let showsReset: Bool
 }
 
 private struct CompactMetricColumn: View {
     let metric: CompactMetric
     let showRemaining: Bool
+    let usePaceColoring: Bool
 
     private var displayPercentage: Double {
         min(100, max(0, showRemaining ? 100 - metric.percentage : metric.percentage))
     }
 
+    private var rawElapsedFraction: Double? {
+        UsageStatusCalculator.elapsedFraction(
+            resetTime: metric.reset,
+            duration: metric.duration,
+            showRemaining: false,
+            excludingWeekends: metric.excludeWeekends
+        )
+    }
+
+    private var timeMarkerFraction: CGFloat? {
+        guard let elapsed = rawElapsedFraction else { return nil }
+        let fraction = showRemaining ? 1.0 - elapsed : elapsed
+        return CGFloat(min(max(fraction, 0), 1))
+    }
+
+    private var paceStatus: PaceStatus? {
+        guard let elapsed = rawElapsedFraction else { return nil }
+        return PaceStatus.calculate(usedPercentage: metric.percentage, elapsedFraction: elapsed)
+    }
+
+    private var paceColor: Color {
+        paceStatus?.swiftUIColor ?? Color(nsColor: .labelColor).opacity(0.75)
+    }
+
     private var color: Color {
         switch UsageStatusCalculator.calculateStatus(
             usedPercentage: metric.percentage,
-            showRemaining: showRemaining
+            showRemaining: showRemaining,
+            elapsedFraction: usePaceColoring ? rawElapsedFraction : nil
         ) {
         case .safe:
             return .adaptiveGreen
@@ -316,17 +367,29 @@ private struct CompactMetricColumn: View {
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.primary.opacity(0.08))
+                        .frame(height: 5)
+
                     Capsule()
                         .fill(color)
-                        .frame(width: max(2, geometry.size.width * displayPercentage / 100))
-                }
-            }
-            .frame(height: 5)
+                        .frame(width: max(2, geometry.size.width * displayPercentage / 100), height: 5)
 
-            Text(Self.resetText(metric.reset))
-                .font(.system(size: 8.5))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+                    if let fraction = timeMarkerFraction {
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(paceColor)
+                            .frame(width: 2.5, height: 9)
+                            .offset(x: min(max(geometry.size.width * fraction - 1.25, 0), geometry.size.width - 2.5))
+                    }
+                }
+                .frame(height: 9)
+            }
+            .frame(height: 9)
+
+            if metric.showsReset {
+                Text(Self.resetText(metric.reset))
+                    .font(.system(size: 8.5))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
