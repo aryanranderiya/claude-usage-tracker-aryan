@@ -172,6 +172,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // FORCE SHOW wizard on very first app launch (one-time)
         // This ensures users see the migration option if they have old data
         if !SharedDataStore.shared.hasShownWizardOnce() {
+            // If cswap/OpenCode/Codex detection already found accounts, the
+            // first launch has usable profiles and does not need the migration
+            // wizard. Mark it shown so the menu bar starts immediately.
+            if ProfileManager.shared.activeProfile?.hasAnyCredentials == true {
+                LoggingService.shared.log("AppDelegate: Local accounts auto-detected on first launch - skipping setup wizard")
+                SharedDataStore.shared.markWizardShown()
+                return false
+            }
             LoggingService.shared.log("AppDelegate: First launch - forcing wizard to show migration option")
             return true
         }
