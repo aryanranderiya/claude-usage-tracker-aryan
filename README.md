@@ -82,6 +82,7 @@ How it stays out of the way:
 - Auto-created profiles carry a stable `externalAccountKey`, so relaunching updates the same profile instead of creating duplicates.
 - Multi-profile mode turns on automatically the first time more than one local account is detected; after that the user's choice is kept.
 - Deleting an auto-created profile does not hide its account — it is rediscovered on the next launch. Unselect it in **Settings → Manage Profiles** instead.
+- The Sparkle feed points at the fork (`aryanranderiya.github.io/Claude-Usage-Tracker/appcast.xml`), not upstream, so an upstream auto-update cannot silently replace these changes. Publish a fork appcast to enable updates.
 
 Build from source with Xcode 16 or later. The source folders are synchronized groups, so the added provider files need no `.pbxproj` edits:
 
