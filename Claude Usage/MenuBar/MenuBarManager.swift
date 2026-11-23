@@ -24,6 +24,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
+    private var lastPopoverRefreshTime: Date = .distantPast
 
     // Track last known reset times for history recording
     private var lastKnownSessionResetTime: [UUID: Date] = [:]
@@ -506,7 +507,7 @@ class MenuBarManager: NSObject, ObservableObject {
         let contentView = PopoverContentView(
             manager: self,
             onRefresh: { [weak self] in
-                self?.refreshUsage()
+                self?.refreshAllProfilesForPopover(force: true)
             },
             onPreferences: { [weak self] in
                 self?.closePopoverOrWindow()
@@ -599,6 +600,10 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
                 // Stop any existing monitor first
                 stopMonitoringForOutsideClicks()
+                // The popover lists every detected account, so refresh them
+                // together before presenting it (debounced).
+                refreshAllProfilesForPopover()
+
                 // Update content view controller for current profile data
                 popover.contentViewController = createContentViewController()
                 showPopover(popover, from: button)
@@ -1006,21 +1011,19 @@ class MenuBarManager: NSObject, ObservableObject {
         LoggingService.shared.log("MenuBarManager: Multi-profile display updated incrementally with \(selectedProfiles.count) profiles")
     }
 
-    /// Refreshes usage data for all profiles selected for multi-profile display
-    private func refreshAllSelectedProfiles() {
-        // Filter on `hasAnyCredentials` (not `hasUsageCredentials`) so that profiles
+    /// Refreshes the supplied profiles in one pass. Shared by opt-in
+    /// multi-profile mode and the all-accounts popover.
+    private func refreshProfiles(_ profiles: [Profile], reason: String) {
+        // Filter on `hasAnyCredentials` (not `hasUsageCredentials`) so profiles
         // whose CLI OAuth token has expired are still polled — `fetchUsageForProfile`
         // will transparently refresh expired tokens via the refresh_token grant.
-        // Excluding them here would prevent the refresh path from ever running.
-        let selectedProfiles = profileManager.profiles.filter { $0.isSelectedForDisplay && $0.hasAnyCredentials }
-
-        guard !selectedProfiles.isEmpty else {
-            LoggingService.shared.log("MenuBarManager: No selected profiles with usage credentials to refresh")
+        guard !profiles.isEmpty else {
+            LoggingService.shared.log("MenuBarManager: No profiles with usage credentials to refresh (\(reason))")
             updateAllStatusBarIcons()
             return
         }
 
-        LoggingService.shared.log("MenuBarManager: Refreshing \(selectedProfiles.count) selected profiles for multi-profile mode")
+        LoggingService.shared.log("MenuBarManager: Refreshing \(profiles.count) profile(s) (\(reason))")
 
         Task {
             await MainActor.run {
@@ -1039,7 +1042,7 @@ class MenuBarManager: NSObject, ObservableObject {
             }
 
             // Fetch usage for each selected profile
-            for profile in selectedProfiles {
+            for profile in profiles {
                 LoggingService.shared.log("MenuBarManager: Fetching usage for profile '\(profile.name)'")
 
                 // Capture previous usage for reset detection
@@ -1133,14 +1136,18 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
             }
 
-            // Update all icons once after all profiles are refreshed
+            // Update the menu bar once after all profiles are refreshed.
             await MainActor.run {
-                let config = self.profileManager.multiProfileConfig
-                self.statusBarUIManager?.updateMultiProfileButtons(
-                    profiles: self.profileManager.profiles,
-                    config: config,
-                    activeProfileId: self.profileManager.activeProfile?.id
-                )
+                if self.profileManager.displayMode == .multi {
+                    let config = self.profileManager.multiProfileConfig
+                    self.statusBarUIManager?.updateMultiProfileButtons(
+                        profiles: self.profileManager.profiles,
+                        config: config,
+                        activeProfileId: self.profileManager.activeProfile?.id
+                    )
+                } else {
+                    self.updateAllStatusBarIcons()
+                }
                 self.consecutiveRefreshFailures = 0
                 self.lastRefreshError = nil
                 self.hasCredentialError = false
@@ -1159,6 +1166,23 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
             }
         }
+    }
+
+
+    /// Refreshes the profiles selected for opt-in multi-profile display.
+    private func refreshAllSelectedProfiles() {
+        let selected = profileManager.profiles.filter { $0.isSelectedForDisplay && $0.hasAnyCredentials }
+        refreshProfiles(selected, reason: "multi-profile")
+    }
+
+    /// The popover lists every detected account, not only the primary. Refresh
+    /// them together when it opens, debounced so rapid open/close does not
+    /// hammer provider endpoints.
+    private func refreshAllProfilesForPopover(force: Bool = false) {
+        guard force || Date().timeIntervalSince(lastPopoverRefreshTime) > 20 else { return }
+        lastPopoverRefreshTime = Date()
+        let all = profileManager.profiles.filter { $0.hasAnyCredentials }
+        refreshProfiles(all, reason: "all-accounts popover")
     }
 
     /// Fetches usage data for a specific profile using its provider's service.
@@ -1859,7 +1883,7 @@ extension MenuBarManager: NSPopoverDelegate {
         // positioning) conflict with the window's layout constraints.
         let contentView = PopoverContentView(
             manager: self,
-            onRefresh: { [weak self] in self?.refreshUsage() },
+            onRefresh: { [weak self] in self?.refreshAllProfilesForPopover(force: true) },
             onPreferences: { [weak self] in
                 self?.closePopoverOrWindow()
                 self?.preferencesClicked()

@@ -94,62 +94,17 @@ struct PopoverContentView: View {
     let onPreferences: () -> Void
 
     @State private var isRefreshing = false
-    @State private var showInsights = false
     // Drives a custom entrance animation. The native NSPopover open animation is
     // disabled (see MenuBarManager) because its animated window resize recurses
     // infinitely on macOS 26/27; this fades/scales the content in from the top
     // instead — a pure SwiftUI transform on a fixed-size view, so it can't trigger
     // the window-resize loop.
     @State private var appeared = false
-    @StateObject private var profileManager = ProfileManager.shared
-
-    private func profileInitials(for name: String) -> String {
-        let words = name.split(separator: " ")
-        if words.count >= 2 {
-            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
-        } else if let first = words.first {
-            return String(first.prefix(2)).uppercased()
-        }
-        return "?"
-    }
-
-    // Computed properties for multi-profile mode support
-    private var displayUsage: ClaudeUsage {
-        manager.clickedProfileUsage ?? manager.usage
-    }
-
-    private var displayAPIUsage: APIUsage? {
-        // When viewing a non-active profile, use only that profile's API data
-        // to avoid leaking the active profile's console data
-        if manager.clickedProfileUsage != nil {
-            return manager.clickedProfileAPIUsage
-        }
-        return manager.apiUsage
-    }
-
-    /// Provider of the profile being viewed (clicked profile in multi-profile
-    /// mode, else the active profile).
-    private var displayProvider: Provider {
-        let viewingProfile = manager.clickedProfileId.flatMap { id in
-            profileManager.profiles.first(where: { $0.id == id })
-        } ?? profileManager.activeProfile
-        return viewingProfile?.provider ?? .anthropic
-    }
-
-    /// Monthly spend target of the profile being viewed (clicked profile in
-    /// multi-profile mode, else the active profile).
-    private var displayMonthlySpendLimitCents: Double? {
-        let viewingProfile = manager.clickedProfileId.flatMap { id in
-            profileManager.profiles.first(where: { $0.id == id })
-        } ?? profileManager.activeProfile
-        return viewingProfile?.monthlySpendLimitCents
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             SmartHeader(
-                usage: displayUsage,
                 status: manager.status,
                 isRefreshing: isRefreshing,
                 onRefresh: {
@@ -163,9 +118,7 @@ struct PopoverContentView: View {
                         }
                     }
                 },
-                onManageProfiles: onPreferences,
-                onPreferences: onPreferences,
-                clickedProfileId: manager.clickedProfileId
+                onPreferences: onPreferences
             )
 
             PopoverDivider()
@@ -199,72 +152,9 @@ struct PopoverContentView: View {
                 }
             }
 
-            // Viewing usage tag (shown in multi-profile mode)
-            if profileManager.displayMode == .multi,
-               let viewingProfile = manager.clickedProfileId.flatMap({ id in
-                   profileManager.profiles.first(where: { $0.id == id })
-               }) ?? profileManager.activeProfile {
-                HStack(spacing: 8) {
-                    // Profile initials avatar
-                    ZStack {
-                        Circle()
-                            .fill(Color.accentColor.opacity(0.15))
-                            .frame(width: 20, height: 20)
-
-                        Text(profileInitials(for: viewingProfile.name))
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundColor(.accentColor)
-                    }
-
-                    Text(viewingProfile.name)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-
-                    if viewingProfile.provider != .anthropic {
-                        ProviderLogoView(provider: viewingProfile.provider, size: 10)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    if viewingProfile.id == profileManager.activeProfile?.id {
-                        Text("Active")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule()
-                                    .fill(Color.accentColor.opacity(0.12))
-                            )
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.primary.opacity(0.03))
-                )
-                .padding(.horizontal, 10)
-                .padding(.top, 6)
-            }
-
-            // Usage
-            SmartUsageDashboard(
-                usage: displayUsage,
-                apiUsage: displayAPIUsage,
-                provider: displayProvider,
-                monthlySpendLimitCents: displayMonthlySpendLimitCents
-            )
-
-            // Contextual Insights
-            if showInsights {
-                PopoverDivider()
-                ContextualInsights(usage: displayUsage)
-                    .transition(.opacity)
-            }
-
+            // All detected accounts, grouped by the tool that owns them.
+            // The menu bar itself stays a single primary tracker.
+            ProfilesOverviewView(onManageProfiles: onPreferences)
         }
         .padding(.bottom, 8)
         .frame(width: 280)
@@ -289,244 +179,45 @@ struct PopoverDivider: View {
     }
 }
 
-// MARK: - Profile Switcher Compact (for header)
+// MARK: - Primary Profile Header
 
-struct ProfileSwitcherCompact: View {
+/// The menu bar's primary account. Selection happens in the all-accounts list,
+/// so this is a label, not another profile menu.
+struct PrimaryProfileHeader: View {
     @StateObject private var profileManager = ProfileManager.shared
-    @State private var isHovered = false
-    let onManageProfiles: () -> Void
 
     var body: some View {
-        Menu {
-            ForEach(profileManager.profiles) { profile in
-                Button(action: {
-                    Task {
-                        await profileManager.activateProfile(profile.id)
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 12))
+        HStack(spacing: 6) {
+            if let profile = profileManager.activeProfile {
+                ProviderLogoView(provider: profile.provider, size: 12)
+                    .foregroundColor(profile.provider.brandTint)
 
-                        Text(profile.menuBarLabel)
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+                Text(profile.name)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
-                        Text(profile.name)
-                            .font(.system(size: 12, weight: .medium))
-
-                        Spacer()
-
-                        HStack(spacing: 4) {
-                            if profile.provider != .anthropic {
-                                ProviderLogoView(provider: profile.provider, size: 9)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            if profile.hasCliAccount {
-                                Image(systemName: "terminal.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.adaptiveGreen)
-                            }
-
-                            if profile.claudeSessionKey != nil {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.blue)
-                            }
-
-                            if profile.id == profileManager.activeProfile?.id {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button(action: onManageProfiles) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12))
-                    Text("popover.manage_profiles".localized)
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
-        } label: {
-            Text(profileManager.activeProfile?.name ?? "popover.no_profile".localized)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-        }
-        .menuStyle(.borderlessButton)
-        .buttonStyle(.plain)
-        // The popover window can hand this Menu first-responder status on open,
-        // which draws an accent-colored focus ring around the header label.
-        .focusEffectDisabledCompat()
-    }
-}
-
-// MARK: - Profile Switcher Bar
-
-struct ProfileSwitcherBar: View {
-    @StateObject private var profileManager = ProfileManager.shared
-    @State private var isHovered = false
-    let onManageProfiles: () -> Void
-
-    var body: some View {
-        Menu {
-            ForEach(profileManager.profiles) { profile in
-                Button(action: {
-                    Task {
-                        await profileManager.activateProfile(profile.id)
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 12))
-
-                        Text(profile.menuBarLabel)
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
-
-                        Text(profile.name)
-                            .font(.system(size: 12, weight: .medium))
-
-                        Spacer()
-
-                        HStack(spacing: 4) {
-                            if profile.provider != .anthropic {
-                                ProviderLogoView(provider: profile.provider, size: 9)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            if profile.hasCliAccount {
-                                Image(systemName: "terminal.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.adaptiveGreen)
-                            }
-
-                            if profile.claudeSessionKey != nil {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.blue)
-                            }
-
-                            if profile.id == profileManager.activeProfile?.id {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button(action: onManageProfiles) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12))
-                    Text("popover.manage_profiles".localized)
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                // Profile avatar
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 28, height: 28)
-
-                    Text(profileInitials)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(profileManager.activeProfile?.name ?? "popover.no_profile".localized)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-
-                    HStack(spacing: 4) {
-                        if profileManager.profiles.count > 1 {
-                            Text(String(format: "popover.profiles_count".localized, profileManager.profiles.count))
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("popover.profile_count_singular".localized)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-
-                        Text("•")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary.opacity(0.5))
-
-                        Text("common.switch".localized)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isHovered ? Color.primary.opacity(0.05) : Color.clear)
-            )
-        }
-        .menuStyle(.borderlessButton)
-        .buttonStyle(.plain)
-        // See ProfileSwitcherCompact: suppress the first-responder focus ring.
-        .focusEffectDisabledCompat()
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
+                Text("profiles.primary_badge".localized)
+                    .font(.system(size: 7.5, weight: .bold))
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+            } else {
+                Text("app.name".localized)
+                    .font(.system(size: 13, weight: .bold))
             }
         }
-    }
-
-    private var profileInitials: String {
-        guard let name = profileManager.activeProfile?.name else { return "?" }
-        let words = name.split(separator: " ")
-        if words.count >= 2 {
-            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
-        } else if let first = words.first {
-            return String(first.prefix(2)).uppercased()
-        }
-        return "?"
     }
 }
 
 // MARK: - Smart Header Component
 struct SmartHeader: View {
-    let usage: ClaudeUsage
     let status: ClaudeStatus
     let isRefreshing: Bool
     let onRefresh: () -> Void
-    let onManageProfiles: () -> Void
     let onPreferences: () -> Void
-    var clickedProfileId: UUID? = nil
-
-    @StateObject private var profileManager = ProfileManager.shared
 
     private var statusColor: Color {
         switch status.indicator.color {
@@ -538,29 +229,10 @@ struct SmartHeader: View {
         }
     }
 
-    private var isMultiProfileMode: Bool {
-        profileManager.displayMode == .multi
-    }
-
-    private var clickedProfile: Profile? {
-        guard let id = clickedProfileId else { return nil }
-        return profileManager.profiles.first { $0.id == id }
-    }
-
-    private func profileInitials(for name: String) -> String {
-        let words = name.split(separator: " ")
-        if words.count >= 2 {
-            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
-        } else if let first = words.first {
-            return String(first.prefix(2)).uppercased()
-        }
-        return "?"
-    }
-
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                ProfileSwitcherCompact(onManageProfiles: onManageProfiles)
+                PrimaryProfileHeader()
 
                 // Status
                 Button(action: {
@@ -902,12 +574,14 @@ struct SmartUsageDashboard: View {
     let apiUsage: APIUsage?
     var provider: Provider = .anthropic
     var monthlySpendLimitCents: Double? = nil
+    var profile: Profile? = nil
     @StateObject private var profileManager = ProfileManager.shared
     private var capabilities: ProviderCapabilities {
         provider.descriptor.capabilities
     }
 
     private var showRemainingPercentage: Bool {
+        if let profile { return profile.iconConfig.showRemainingPercentage }
         if profileManager.displayMode == .multi {
             return profileManager.multiProfileConfig.showRemainingPercentage
         }
@@ -915,6 +589,7 @@ struct SmartUsageDashboard: View {
     }
 
     private var showTimeMarker: Bool {
+        if let profile { return profile.iconConfig.showTimeMarker }
         if profileManager.displayMode == .multi {
             return profileManager.multiProfileConfig.showTimeMarker
         }
@@ -922,6 +597,7 @@ struct SmartUsageDashboard: View {
     }
 
     private var usePaceColoring: Bool {
+        if let profile { return profile.iconConfig.usePaceColoring }
         if profileManager.displayMode == .multi {
             return profileManager.multiProfileConfig.usePaceColoring
         }
@@ -929,6 +605,7 @@ struct SmartUsageDashboard: View {
     }
 
     private var showPaceMarker: Bool {
+        if let profile { return profile.iconConfig.showPaceMarker }
         if profileManager.displayMode == .multi {
             return profileManager.multiProfileConfig.showPaceMarker
         }
@@ -936,6 +613,7 @@ struct SmartUsageDashboard: View {
     }
 
     private var excludeWeekendsFromWeeklyPace: Bool {
+        if let profile { return profile.iconConfig.excludeWeekendsFromWeeklyPace }
         if profileManager.displayMode == .multi {
             return profileManager.multiProfileConfig.excludeWeekendsFromWeeklyPace
         }

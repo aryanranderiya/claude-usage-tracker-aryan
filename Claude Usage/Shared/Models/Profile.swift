@@ -295,7 +295,7 @@ struct Profile: Codable, Identifiable, Equatable {
         case .cswap:
             return "cswap"
         case .opencode:
-            return "OpenCode Go"
+            return "OpenCode"
         case .codex:
             return "Codex CLI"
         }
