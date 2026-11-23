@@ -55,6 +55,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if !shouldShowSetupWizard() {
             // Initialize menu bar with active profile
             menuBarManager?.setup()
+
+            if CommandLine.arguments.contains("--show-popover") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.menuBarManager?.showPopoverForDebug()
+                }
+            }
         } else {
             showSetupWizardManually()
             // Mark that wizard has been shown once

@@ -28,22 +28,20 @@ struct ProfilesOverviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 ForEach(groups) { group in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 7) {
                             ProviderLogoView(provider: group.provider, size: 11)
                                 .foregroundColor(group.provider.brandTint)
+
                             Text(group.title)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.secondary)
 
                             Text("\(group.profiles.count)")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundColor(.secondary)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Capsule().fill(Color.primary.opacity(0.06)))
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary.opacity(0.55))
 
                             Spacer()
                         }
@@ -59,6 +57,11 @@ struct ProfilesOverviewView: View {
                                     _ = await profileManager.activateProfile(profile.id)
                                 }
                             }
+
+                            if profile.id != group.profiles.last?.id {
+                                Divider()
+                                    .padding(.leading, 34)
+                            }
                         }
                     }
                 }
@@ -67,23 +70,24 @@ struct ProfilesOverviewView: View {
                     .padding(.top, 2)
 
                 Button(action: onManageProfiles) {
-                    HStack(spacing: 7) {
+                    HStack(spacing: 8) {
                         Image(systemName: "person.2.fill")
                             .font(.system(size: 10, weight: .medium))
                         Text("profiles.title".localized)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: 8, weight: .semibold))
                     }
                     .foregroundColor(.secondary)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 5)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
         .scrollIndicators(.hidden)
     }
@@ -116,53 +120,45 @@ private struct ProfileSummaryCard: View {
         profile.claudeUsage
     }
 
+    private var planText: String? {
+        usage?.planType?
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 8) {
-                ZStack(alignment: .bottomTrailing) {
-                    ProviderLogoView(provider: profile.provider, size: 18)
-                        .foregroundColor(profile.provider.brandTint)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(Color.primary.opacity(0.05)))
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .center, spacing: 9) {
+                ProviderLogoView(provider: profile.provider, size: 20)
+                    .foregroundColor(profile.provider.brandTint)
+                    .frame(width: 26, height: 26)
 
-                    Text(profile.provider.descriptor.shortName)
-                        .font(.system(size: 6.5, weight: .bold))
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 2)
-                        .padding(.vertical, 0.5)
-                        .background(Capsule().fill(Color(nsColor: .windowBackgroundColor)))
-                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profile.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .minimumScaleFactor(0.86)
+                        .allowsTightening(true)
 
-                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
-                        Text(profile.name)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-
                         if isPrimary {
                             Text("profiles.primary_badge".localized)
-                                .font(.system(size: 7.5, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1.5)
-                                .background(Color.accentColor)
-                                .cornerRadius(3)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.accentColor)
                         }
-                    }
 
-                    HStack(spacing: 4) {
                         Text(profile.sourceDisplayName)
-                        if let plan = usage?.planType {
-                            Text("· \(plan.replacingOccurrences(of: "_", with: " ").capitalized)")
+                        if let planText {
+                            Text("· \(planText)")
                         }
                     }
-                    .font(.system(size: 9))
+                    .font(.system(size: 9.5))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                 }
 
-                Spacer(minLength: 4)
+                Spacer(minLength: 6)
 
                 Button(action: onMakePrimary) {
                     Image(systemName: isPrimary ? "pin.fill" : "pin")
@@ -208,71 +204,88 @@ private struct ProfileSummaryCard: View {
                 )
             }
         }
-        .padding(9)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(isPrimary ? 0.055 : 0.03))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(isPrimary ? 0.10 : 0.055), lineWidth: 1)
-        )
+        .padding(.vertical, 7)
     }
 
     @ViewBuilder
     private func compactMetrics(_ usage: ClaudeUsage) -> some View {
-        if usage.hasSessionLimit || usage.hasWeeklyLimit || usage.fableWeeklyPercentage > 0 {
-            HStack(alignment: .top, spacing: 10) {
-                if usage.hasSessionLimit {
-                    CompactMetricBar(
-                        label: "5h",
-                        percentage: usage.effectiveSessionPercentage,
-                        reset: usage.sessionResetTime,
-                        showRemaining: showRemaining
-                    )
-                }
+        let metrics = compactMetricModels(usage)
 
-                if usage.hasWeeklyLimit {
-                    CompactMetricBar(
-                        label: "7d",
-                        percentage: usage.weeklyPercentage,
-                        reset: usage.weeklyResetTime,
-                        showRemaining: showRemaining
-                    )
-                }
-
-                if usage.fableWeeklyPercentage > 0 {
-                    CompactMetricBar(
-                        label: "Fable",
-                        percentage: usage.fableWeeklyPercentage,
-                        reset: usage.fableWeeklyResetTime ?? usage.weeklyResetTime,
-                        showRemaining: showRemaining,
-                        compact: true
-                    )
-                }
-            }
-        } else {
+        if metrics.isEmpty {
             Text("popover.no_limits_reported".localized)
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(metrics) { metric in
+                    CompactMetricColumn(
+                        metric: metric,
+                        showRemaining: showRemaining
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
+    }
+
+    private func compactMetricModels(_ usage: ClaudeUsage) -> [CompactMetric] {
+        var metrics: [CompactMetric] = []
+
+        if usage.hasSessionLimit {
+            metrics.append(
+                CompactMetric(
+                    id: "5h",
+                    label: "5h",
+                    percentage: usage.effectiveSessionPercentage,
+                    reset: usage.sessionResetTime
+                )
+            )
+        }
+
+        if usage.hasWeeklyLimit {
+            metrics.append(
+                CompactMetric(
+                    id: "7d",
+                    label: "7d",
+                    percentage: usage.weeklyPercentage,
+                    reset: usage.weeklyResetTime
+                )
+            )
+        }
+
+        if usage.fableWeeklyPercentage > 0 {
+            metrics.append(
+                CompactMetric(
+                    id: "fable",
+                    label: "Fable",
+                    percentage: usage.fableWeeklyPercentage,
+                    reset: usage.fableWeeklyResetTime ?? usage.weeklyResetTime
+                )
+            )
+        }
+
+        return metrics
     }
 }
 
-private struct CompactMetricBar: View {
+private struct CompactMetric: Identifiable {
+    let id: String
     let label: String
     let percentage: Double
     let reset: Date
+}
+
+private struct CompactMetricColumn: View {
+    let metric: CompactMetric
     let showRemaining: Bool
-    var compact: Bool = false
 
     private var displayPercentage: Double {
-        min(100, max(0, showRemaining ? 100 - percentage : percentage))
+        min(100, max(0, showRemaining ? 100 - metric.percentage : metric.percentage))
     }
 
     private var color: Color {
         switch UsageStatusCalculator.calculateStatus(
-            usedPercentage: percentage,
+            usedPercentage: metric.percentage,
             showRemaining: showRemaining
         ) {
         case .safe:
@@ -286,23 +299,17 @@ private struct CompactMetricBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 4) {
-                Text(label)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(metric.label)
                     .font(.system(size: 8, weight: .bold))
                     .foregroundColor(.secondary)
 
+                Spacer(minLength: 0)
+
                 Text("\(Int(displayPercentage.rounded()))%")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(color)
-
-                if !compact {
-                    Spacer(minLength: 2)
-                    Text(reset, style: .relative)
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
             }
 
             GeometryReader { geometry in
@@ -314,12 +321,33 @@ private struct CompactMetricBar: View {
                         .frame(width: max(2, geometry.size.width * displayPercentage / 100))
                 }
             }
-            .frame(height: 4)
+            .frame(height: 5)
+
+            Text(Self.resetText(metric.reset))
+                .font(.system(size: 8.5))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-}
 
+    private static func resetText(_ date: Date) -> String {
+        let seconds = date.timeIntervalSinceNow
+        guard seconds > 0 else { return "now" }
+
+        let days = Int(seconds / 86_400)
+        let hours = Int(seconds.truncatingRemainder(dividingBy: 86_400) / 3_600)
+        let minutes = Int(seconds.truncatingRemainder(dividingBy: 3_600) / 60)
+
+        if days > 0 {
+            return "in \(days)d \(hours)h"
+        }
+        if hours > 0 {
+            return "in \(hours)h \(minutes)m"
+        }
+        return "in \(minutes)m"
+    }
+}
 
 extension Provider {
     /// Brand tint for provider marks. Claude/cswap share the Claude identity;

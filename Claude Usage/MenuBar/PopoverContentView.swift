@@ -157,7 +157,7 @@ struct PopoverContentView: View {
             ProfilesOverviewView(onManageProfiles: onPreferences)
         }
         .padding(.bottom, 8)
-        .frame(width: 280)
+        .frame(width: 360)
         .background(VisualEffectBackground())
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.96, anchor: .top)
@@ -179,45 +179,15 @@ struct PopoverDivider: View {
     }
 }
 
-// MARK: - Primary Profile Header
-
-/// The menu bar's primary account. Selection happens in the all-accounts list,
-/// so this is a label, not another profile menu.
-struct PrimaryProfileHeader: View {
-    @StateObject private var profileManager = ProfileManager.shared
-
-    var body: some View {
-        HStack(spacing: 6) {
-            if let profile = profileManager.activeProfile {
-                ProviderLogoView(provider: profile.provider, size: 12)
-                    .foregroundColor(profile.provider.brandTint)
-
-                Text(profile.name)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                Text("profiles.primary_badge".localized)
-                    .font(.system(size: 7.5, weight: .bold))
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
-            } else {
-                Text("app.name".localized)
-                    .font(.system(size: 13, weight: .bold))
-            }
-        }
-    }
-}
-
 // MARK: - Smart Header Component
+
 struct SmartHeader: View {
     let status: ClaudeStatus
     let isRefreshing: Bool
     let onRefresh: () -> Void
     let onPreferences: () -> Void
+
+    @StateObject private var profileManager = ProfileManager.shared
 
     private var statusColor: Color {
         switch status.indicator.color {
@@ -230,37 +200,56 @@ struct SmartHeader: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                PrimaryProfileHeader()
-
-                // Status
-                Button(action: {
-                    if let url = URL(string: "https://status.claude.com") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 6, height: 6)
-
-                        Text(status.description)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .help("Click to open status.claude.com")
+        HStack(alignment: .top, spacing: 10) {
+            if let profile = profileManager.activeProfile {
+                ProviderLogoView(provider: profile.provider, size: 20)
+                    .foregroundColor(profile.provider.brandTint)
+                    .frame(width: 26, height: 26)
             }
 
-            Spacer()
+            VStack(alignment: .leading, spacing: 2) {
+                Text("profiles.primary_badge".localized)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+
+                Text(profileManager.activeProfile?.name ?? "app.name".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .minimumScaleFactor(0.82)
+                    .allowsTightening(true)
+
+                HStack(spacing: 4) {
+                    Text(profileManager.activeProfile?.sourceDisplayName ?? "")
+                    Text("·")
+                    Button(action: {
+                        if let url = URL(string: "https://status.claude.com") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(statusColor)
+                                .frame(width: 5, height: 5)
+                            Text(status.description)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help("Click to open status.claude.com")
+                }
+                .font(.system(size: 9.5))
+                .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 4)
 
             HStack(alignment: .center, spacing: 2) {
-                // Keep awake
                 KeepAwakeHeaderButton()
 
-                // Refresh
                 HeaderIconButton(
                     icon: "arrow.clockwise",
                     isRefreshing: isRefreshing,
@@ -268,7 +257,6 @@ struct SmartHeader: View {
                 )
                 .disabled(isRefreshing)
 
-                // Settings
                 HeaderIconButton(
                     icon: "gearshape.fill",
                     fontSize: 12,
@@ -277,7 +265,7 @@ struct SmartHeader: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 }
 

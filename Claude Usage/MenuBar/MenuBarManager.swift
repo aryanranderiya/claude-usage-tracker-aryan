@@ -521,6 +521,12 @@ class MenuBarManager: NSObject, ObservableObject {
         return hostingController
     }
 
+    /// Developer hook for `--show-popover`: opens the same popover a click
+    /// would, without needing to locate the status item.
+    func showPopoverForDebug() {
+        togglePopover(nil)
+    }
+
     @objc private func togglePopover(_ sender: Any?) {
         // Right-click → show context menu instead of toggling the popover
         if let event = NSApp.currentEvent, event.type == .rightMouseUp {
@@ -1892,7 +1898,7 @@ extension MenuBarManager: NSPopoverDelegate {
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 640),
             styleMask: [.titled, .closable, .nonactivatingPanel, .hudWindow],
             backing: .buffered,
             defer: false
@@ -1902,7 +1908,7 @@ extension MenuBarManager: NSPopoverDelegate {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
-        window.setContentSize(NSSize(width: 280, height: 600))
+        window.setContentSize(NSSize(width: 360, height: 640))
         window.isReleasedWhenClosed = false
         window.level = .floating
         // Allow a torn-off popover to stay on a full-screen app's Space.
