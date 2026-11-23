@@ -197,7 +197,7 @@ final class OpenCodeAccountService {
             return nil
         }
 
-        let expiresAt = UsageDateParser.date(fromUnixMilliseconds: json["expires"])
+        let expiresAt = UsageDateParser.date(fromUnixEpoch: json["expires"])
 
         switch type {
         case "oauth":
@@ -282,7 +282,7 @@ final class OpenCodeAccountService {
                   let type = dict["type"] as? String else { return nil }
 
             if type == "oauth", let access = dict["access"] as? String, !access.isEmpty {
-                let expiresAt = UsageDateParser.date(fromUnixMilliseconds: dict["expires"])
+                let expiresAt = UsageDateParser.date(fromUnixEpoch: dict["expires"])
                 if let expiresAt, expiresAt < Date().addingTimeInterval(-60) { return nil }
                 let metadata = dict["metadata"] as? [String: Any] ?? [:]
                 let accountId = metadata["accountID"] as? String

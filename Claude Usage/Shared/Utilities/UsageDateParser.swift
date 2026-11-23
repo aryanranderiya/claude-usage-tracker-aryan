@@ -23,8 +23,12 @@ enum UsageDateParser {
         return Date(timeIntervalSince1970: number.doubleValue)
     }
 
-    static func date(fromUnixMilliseconds value: Any?) -> Date? {
+    /// Accepts either seconds or milliseconds; OpenCode has used both in
+    /// different storage versions.
+    static func date(fromUnixEpoch value: Any?) -> Date? {
         guard let number = value as? NSNumber else { return nil }
-        return Date(timeIntervalSince1970: number.doubleValue / 1000.0)
+        let raw = number.doubleValue
+        guard raw > 0 else { return nil }
+        return Date(timeIntervalSince1970: raw > 1_000_000_000_000 ? raw / 1000.0 : raw)
     }
 }
