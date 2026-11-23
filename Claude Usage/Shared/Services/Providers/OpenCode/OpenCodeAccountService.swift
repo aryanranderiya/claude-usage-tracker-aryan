@@ -103,13 +103,21 @@ final class OpenCodeAccountService {
         )
 
         switch statusCode {
-        case .some(401), .some(403):
+        case .some(401):
             throw AppError(
                 code: .providerAuthExpired,
                 message: "OpenCode login expired",
-                technicalDetails: "The Go usage endpoint rejected this account (HTTP \(statusCode ?? 0)).",
+                technicalDetails: "The Go usage endpoint rejected this account (HTTP 401).",
                 isRecoverable: true,
                 recoverySuggestion: "Open OpenCode and run `/connect` (or `opencode auth login`) for this account, then refresh."
+            )
+        case .some(403):
+            throw AppError(
+                code: .providerAuthExpired,
+                message: "OpenCode Go subscription required",
+                technicalDetails: "This OpenCode account is not covered by an active Go subscription (HTTP 403).",
+                isRecoverable: true,
+                recoverySuggestion: "Check the Go subscription for this account in the OpenCode Console."
             )
         case .some(200...299):
             break
