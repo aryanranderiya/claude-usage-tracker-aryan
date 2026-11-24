@@ -550,6 +550,11 @@ class ClaudeAPIService: APIServiceProtocol {
         var request = buildAuthenticatedRequest(url: url, auth: .cliOAuth(oauthAccessToken))
         request.httpMethod = "GET"
         request.timeoutInterval = 30
+        // Never serve this from URLSession's cache: a cached response can omit
+        // the scoped Fable window and make a per-model row disappear until the
+        // cache expires.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

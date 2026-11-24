@@ -283,7 +283,7 @@ private struct ProfileSummaryCard: View {
             )
         }
 
-        if usage.fableWeeklyPercentage > 0 {
+        if usage.fableWeeklyPercentage > 0 || usage.fableWeeklyResetTime != nil {
             metrics.append(
                 CompactMetric(
                     id: "fable",

@@ -38,7 +38,8 @@ final class AnthropicUsageProvider: UsageProviderService {
         // Priority 1: claude.ai session key (cookie-based)
         if let sessionKey = profile.claudeSessionKey,
            let orgId = profile.organizationId {
-            return try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
+            let usage = try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
+            return withFableFallback(usage, for: profile)
         }
 
         // Priority 2: CLI OAuth credentials.
@@ -56,7 +57,8 @@ final class AnthropicUsageProvider: UsageProviderService {
             if let usableJSON = usableJSON,
                !ClaudeCodeSyncService.shared.isTokenExpired(usableJSON),
                let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: usableJSON) {
-                return try await apiService.fetchUsageData(oauthAccessToken: accessToken)
+                let usage = try await apiService.fetchUsageData(oauthAccessToken: accessToken)
+                return withFableFallback(usage, for: profile)
             }
         }
 
@@ -68,7 +70,8 @@ final class AnthropicUsageProvider: UsageProviderService {
            let systemCredentials = try? ClaudeCodeSyncService.shared.readSystemCredentials(),
            !ClaudeCodeSyncService.shared.isTokenExpired(systemCredentials),
            let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: systemCredentials) {
-            return try await apiService.fetchUsageData(oauthAccessToken: accessToken)
+            let usage = try await apiService.fetchUsageData(oauthAccessToken: accessToken)
+            return withFableFallback(usage, for: profile)
         }
 
         // No usable live credential (e.g. a non-active profile whose CLI token expired and
@@ -79,7 +82,7 @@ final class AnthropicUsageProvider: UsageProviderService {
         // popup — and the active profile still refreshes live every cycle. (#290)
         if let cached = profile.claudeUsage {
             LoggingService.shared.log("AnthropicUsageProvider: no live credential for '\(profile.name)'; showing last-known cached usage")
-            return cached
+            return withFableFallback(cached, for: profile)
         }
 
         throw AppError(
@@ -93,6 +96,40 @@ final class AnthropicUsageProvider: UsageProviderService {
     /// `fetchUsageData()`, whose internal `getAuthentication()` chain covers
     /// the active profile plus system-level fallbacks. Keep that exact path.
     func fetchUsageForActiveProfile(_ profile: Profile) async throws -> ClaudeUsage {
-        try await apiService.fetchUsageData()
+        let usage = try await apiService.fetchUsageData()
+        return withFableFallback(usage, for: profile)
+    }
+
+    /// The Claude usage endpoint occasionally omits the scoped Fable window
+    /// while the weekly window is still the same. Do not let that blank the
+    /// card: keep the last known Fable row while its reset is in the future,
+    /// then fall back to cswap's cache for the active Claude account.
+    private func withFableFallback(_ usage: ClaudeUsage, for profile: Profile) -> ClaudeUsage {
+        guard usage.fableWeeklyResetTime == nil, usage.fableWeeklyPercentage == 0 else {
+            return usage
+        }
+
+        var result = usage
+
+        // cswap's active account is the freshest local source for the same
+        // Claude login; prefer it over a previous app snapshot.
+        if let active = CswapAccountService.shared.loadAccounts().first(where: { $0.isActive }),
+           let fable = active.scoped.first(where: { $0.name.caseInsensitiveCompare("Fable") == .orderedSame }),
+           let identifier = profile.detectedAccountText,
+           identifier.caseInsensitiveCompare(active.email) == .orderedSame {
+            result.fableWeeklyPercentage = fable.window.percent
+            result.fableWeeklyResetTime = fable.window.resetsAt
+            return result
+        }
+
+        if let previous = profile.claudeUsage,
+           let reset = previous.fableWeeklyResetTime,
+           reset > Date() {
+            result.fableWeeklyPercentage = previous.fableWeeklyPercentage
+            result.fableWeeklyResetTime = reset
+            result.fableWeeklyTokensUsed = previous.fableWeeklyTokensUsed
+        }
+
+        return result
     }
 }
