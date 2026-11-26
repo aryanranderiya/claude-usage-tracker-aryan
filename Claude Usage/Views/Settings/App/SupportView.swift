@@ -8,7 +8,7 @@
 import SwiftUI
 import AppKit
 
-/// Support the project view - Buy Me a Coffee
+/// Support the project view.
 struct SupportView: View {
     var body: some View {
         ScrollView {
@@ -84,37 +84,6 @@ struct SupportView: View {
                 .padding(20)
                 .background(DesignTokens.Colors.cardBackground)
                 .cornerRadius(12)
-
-                // Support section
-                VStack(spacing: 16) {
-                    Text("support.message".localized)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-
-                    Button(action: {
-                        if let url = URL(string: "https://www.buymeacoffee.com/hamedelfayome") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "cup.and.saucer.fill")
-                                .font(.system(size: 16))
-                            Text("support.buy_coffee".localized)
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color(red: 1.0, green: 0.87, blue: 0.0)) // Buy Me a Coffee yellow
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-
-                    Text("support.footer".localized)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
 
                 // GitHub star
                 VStack(spacing: 12) {

@@ -156,8 +156,10 @@ private struct ProfileSummaryCard: View {
 
                 Button(action: onMakePrimary) {
                     Image(systemName: isPrimary ? "pin.fill" : "pin")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(isPrimary ? .accentColor : .secondary)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("profiles.make_primary".localized)

@@ -62,9 +62,55 @@ struct CswapAccount: Equatable {
 final class CswapAccountService {
     static let shared = CswapAccountService()
 
+    private var liveAccounts: [CswapAccount] = []
+    private var liveFetchedAt: Date = .distantPast
+    private var refreshTask: Task<[CswapAccount], Never>?
+    private let stateLock = NSLock()
+
     private init() {}
 
+    /// Synchronous snapshot for discovery/UI. Uses the most recent CLI result
+    /// when one exists, otherwise the read-only cache on disk.
     func loadAccounts() -> [CswapAccount] {
+        stateLock.lock()
+        let live = liveAccounts
+        stateLock.unlock()
+        return live.isEmpty ? loadCachedAccounts() : live
+    }
+
+    /// Refreshes from `cswap list --json`. cswap owns login refresh and usage
+    /// polling; this app only reads its output and never touches credentials.
+    func refreshAccounts(force: Bool = false) async -> [CswapAccount] {
+        stateLock.lock()
+        if let refreshTask {
+            stateLock.unlock()
+            return await refreshTask.value
+        }
+        if !force, !liveAccounts.isEmpty, Date().timeIntervalSince(liveFetchedAt) < 10 {
+            let accounts = liveAccounts
+            stateLock.unlock()
+            return accounts
+        }
+
+        let task = Task.detached(priority: .utility) { Self.fetchLiveAccounts() }
+        refreshTask = task
+        stateLock.unlock()
+
+        let accounts = await task.value
+
+        stateLock.lock()
+        refreshTask = nil
+        if !accounts.isEmpty {
+            liveAccounts = accounts
+            liveFetchedAt = Date()
+        }
+        let resolved = accounts.isEmpty ? liveAccounts : accounts
+        stateLock.unlock()
+
+        return resolved.isEmpty ? loadCachedAccounts() : resolved
+    }
+
+    private func loadCachedAccounts() -> [CswapAccount] {
         guard let sequence = readJSON(at: backupRoot().appendingPathComponent("sequence.json")),
               let sequenceAccounts = sequence["accounts"] as? [String: Any] else {
             return []
@@ -191,6 +237,114 @@ final class CswapAccountService {
     private static func livePercent(_ window: CswapWindow, now: Date) -> Double {
         if let reset = window.resetsAt, reset <= now { return 0 }
         return min(100, max(0, window.percent))
+    }
+
+    // MARK: - Fresh cswap CLI snapshot
+
+    private static func fetchLiveAccounts() -> [CswapAccount] {
+        guard let executable = cswapExecutable() else { return [] }
+
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = ["list", "--json"]
+
+        var environment = ProcessInfo.processInfo.environment
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let extraPath = [home + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"].joined(separator: ":")
+        environment["PATH"] = extraPath + ":" + (environment["PATH"] ?? "/usr/bin:/bin")
+        process.environment = environment
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        let timeout = DispatchWorkItem {
+            if process.isRunning { process.terminate() }
+        }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 20, execute: timeout)
+
+        do {
+            try process.run()
+        } catch {
+            timeout.cancel()
+            return []
+        }
+        process.waitUntilExit()
+        timeout.cancel()
+
+        guard process.terminationStatus == 0 else { return [] }
+        let data = stdout.fileHandleForReading.readDataToEndOfFile()
+        return parseCLIAccounts(data)
+    }
+
+    private static func cswapExecutable() -> URL? {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let candidates = [
+            home.appendingPathComponent(".local/bin/cswap"),
+            URL(fileURLWithPath: "/opt/homebrew/bin/cswap"),
+            URL(fileURLWithPath: "/usr/local/bin/cswap"),
+            home.appendingPathComponent(".local/share/uv/tools/claude-swap/bin/cswap"),
+        ]
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
+    }
+
+    private static func parseCLIAccounts(_ data: Data) -> [CswapAccount] {
+        guard let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let rows = root["accounts"] as? [[String: Any]] else { return [] }
+
+        return rows.compactMap { row -> CswapAccount? in
+            guard let number = row["number"] as? Int,
+                  let email = row["email"] as? String,
+                  !email.isEmpty else { return nil }
+
+            let usage = row["usage"] as? [String: Any]
+                ?? row["lastGoodUsage"] as? [String: Any]
+            let fetchedRaw = row["usageFetchedAt"]
+                ?? row["lastGoodFetchedAt"]
+                ?? row["fetchedAt"]
+            let fetchedAt = UsageDateParser.parse(fetchedRaw)
+
+            let plan = row["plan"] as? [String: Any]
+            let planLabel = plan?["label"] as? String ?? plan?["planDisplayName"] as? String
+            let scoped = (usage?["scoped"] as? [[String: Any]] ?? []).compactMap { item -> CswapScopedWindow? in
+                guard let name = item["name"] as? String,
+                      let window = Self.window(from: item) else { return nil }
+                return CswapScopedWindow(name: name, window: window)
+            }
+
+            return CswapAccount(
+                number: number,
+                email: email,
+                organizationUuid: row["organizationUuid"] as? String,
+                organizationName: row["organizationName"] as? String,
+                alias: row["alias"] as? String,
+                planLabel: planLabel,
+                isActive: row["active"] as? Bool ?? false,
+                isDisabled: row["disabled"] as? Bool ?? false,
+                fetchedAt: fetchedAt,
+                fiveHour: Self.window(from: usage?["fiveHour"] ?? usage?["five_hour"]),
+                sevenDay: Self.window(from: usage?["sevenDay"] ?? usage?["seven_day"]),
+                scoped: scoped
+            )
+        }
+        .sorted { $0.number < $1.number }
+    }
+
+    private static func window(from raw: Any?) -> CswapWindow? {
+        guard let dict = raw as? [String: Any] else { return nil }
+        let percent: Double?
+        if let value = dict["pct"] as? NSNumber { percent = value.doubleValue }
+        else if let value = dict["percent"] as? NSNumber { percent = value.doubleValue }
+        else if let value = dict["utilization"] as? NSNumber { percent = value.doubleValue }
+        else if let value = dict["pct"] as? String { percent = Double(value) }
+        else { percent = nil }
+        guard let percent else { return nil }
+        return CswapWindow(
+            percent: percent,
+            resetsAt: UsageDateParser.parse(dict["resetsAt"] ?? dict["resets_at"] ?? dict["resets"])
+        )
     }
 
     // MARK: - Local file helpers

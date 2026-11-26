@@ -15,8 +15,6 @@
 
   <br>
 
-  <a href="https://www.buymeacoffee.com/hamedelfayome"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="54"></a>
-
   <img src="https://claudetracker.com/asset/specs.svg?items=macOS%2013.0%2B%20(Ventura)%2C~6%20MB%2CNative%20Swift%20%2F%20SwiftUI%2COfficially%20Signed" alt="macOS 13.0+ (Ventura) · ~6 MB · Native Swift/SwiftUI · Officially Signed" height="40" align="middle"> 
   <a href="https://claudetracker.com"><img src="https://claudetracker.com/asset/website.svg" alt="claudetracker.com — live stats &amp; install" height="30" hspace="4" align="middle"></a>
 

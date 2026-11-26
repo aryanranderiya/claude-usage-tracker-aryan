@@ -842,7 +842,6 @@
 "support.no_tracking" = "Kein Tracking";
 "support.no_tracking_desc" = "Ihre Privatsphäre ist wichtig. Keine Analysen, keine Telemetrie, keine Datenerfassung. Alles bleibt auf Ihrem Mac.";
 "support.message" = "Wenn Sie diese App nützlich finden, erwägen Sie, ihre Entwicklung zu unterstützen";
-"support.buy_coffee" = "Mir einen Kaffee kaufen";
 "support.footer" = "Ihre Unterstützung hält dieses Projekt am Leben und wachsen";
 "support.also_support" = "Sie können auch unterstützen durch";
 "support.star_github" = "Sternebewertung auf GitHub";
@@ -1159,9 +1158,9 @@
 "keep_awake.problem_listener" = "Der Automatikmodus sieht Claude Code nicht: Der Port des lokalen Listeners wird von einer anderen App oder einer weiteren Kopie von Claude Usage belegt.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";

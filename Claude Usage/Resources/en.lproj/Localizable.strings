@@ -503,7 +503,7 @@
 /* MARK: - Manage Profiles */
 /* ==================== */
 "profiles.title" = "Manage Profiles";
-"profiles.subtitle" = "Choose the primary account shown in the menu bar, and manage the other detected accounts here.";
+"profiles.subtitle" = "Pin the account shown in the menu bar, and manage the other detected accounts here.";
 "profiles.create_new" = "Create New Profile";
 "profiles.about_title" = "About Profiles";
 "profiles.about_description" = "Each profile has its own:";
@@ -846,7 +846,6 @@
 "support.no_tracking" = "No Tracking";
 "support.no_tracking_desc" = "Your privacy matters. No analytics, no telemetry, no data collection. Everything stays on your Mac.";
 "support.message" = "If you find this app useful, consider supporting its development";
-"support.buy_coffee" = "Buy Me a Coffee";
 "support.footer" = "Your support helps keep this project alive and growing";
 "support.also_support" = "You can also support by";
 "support.star_github" = "Starring on GitHub";
@@ -1155,9 +1154,9 @@
 "keep_awake.problem_listener" = "Auto mode can't see Claude Code: the local listener's port is in use by another app or another copy of Claude Usage.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";

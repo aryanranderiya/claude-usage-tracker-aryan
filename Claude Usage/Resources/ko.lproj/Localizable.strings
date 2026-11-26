@@ -853,7 +853,6 @@
 "support.no_tracking" = "추적 없음";
 "support.no_tracking_desc" = "귀하의 개인 정보는 중요합니다. 분석, 원격 측정, 데이터 수집이 없습니다. 모든 것이 Mac에 남아 있습니다.";
 "support.message" = "이 앱이 유용하다고 생각하시면 개발을 지원해 주세요";
-"support.buy_coffee" = "커피 사주기";
 "support.footer" = "귀하의 지원은 이 프로젝트를 계속 유지하고 성장시키는 데 도움이 됩니다";
 "support.also_support" = "다음 방법으로도 지원할 수 있습니다";
 "support.star_github" = "GitHub에서 스타 주기";
@@ -1168,9 +1167,9 @@
 "keep_awake.problem_listener" = "자동 모드가 Claude Code를 감지할 수 없습니다: 로컬 리스너 포트를 다른 앱이나 다른 Claude Usage가 사용 중입니다.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";

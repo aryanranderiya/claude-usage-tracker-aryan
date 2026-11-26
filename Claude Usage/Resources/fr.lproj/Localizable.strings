@@ -820,7 +820,6 @@
 "support.no_tracking" = "Pas de Suivi";
 "support.no_tracking_desc" = "Votre vie privée compte. Pas d'analyse, pas de télémétrie, pas de collecte de données. Tout reste sur votre Mac.";
 "support.message" = "Si vous trouvez cette application utile, envisagez de soutenir son développement";
-"support.buy_coffee" = "M'offrir un Café";
 "support.footer" = "Votre soutien aide à maintenir ce projet vivant et en croissance";
 "support.also_support" = "Vous pouvez également soutenir en";
 "support.star_github" = "Mettre une Étoile sur GitHub";
@@ -1137,9 +1136,9 @@
 "keep_awake.problem_listener" = "Le mode automatique ne voit pas Claude Code : le port de l'écouteur local est utilisé par une autre app ou une autre copie de Claude Usage.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";

@@ -15,11 +15,12 @@ final class CswapUsageProvider: UsageProviderService {
     private init() {}
 
     func hasCredentials(for profile: Profile) -> Bool {
-        accountService.account(for: profile)?.hasAnyUsage == true
+        profile.externalAccountKey != nil
     }
 
     func fetchUsage(for profile: Profile) async throws -> ClaudeUsage {
-        guard let account = accountService.account(for: profile) else {
+        let accounts = await accountService.refreshAccounts()
+        guard let account = accounts.first(where: { $0.accountKey == profile.externalAccountKey }) else {
             throw AppError(
                 code: .providerCredentialsNotFound,
                 message: "cswap account not found",

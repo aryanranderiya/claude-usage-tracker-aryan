@@ -989,7 +989,6 @@
 "support.title" = "Підтримати проект";
 "support.subtitle" = "Claude Usage Tracker — безкоштовний та відкритий код";
 "support.message" = "Якщо ця програма вам корисна, розгляньте можливість підтримати її розробку";
-"support.buy_coffee" = "Пригостити кавою";
 "support.star_github" = "Додати зірку на GitHub";
 "support.also_support" = "Ви також можете підтримати, зробивши";
 "support.footer" = "Ваша підтримка допомагає зберегти та розвивати цей проект";
@@ -1155,9 +1154,9 @@
 "keep_awake.problem_listener" = "Автоматичний режим не бачить Claude Code: порт локального слухача зайнятий іншою програмою або іншою копією Claude Usage.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";

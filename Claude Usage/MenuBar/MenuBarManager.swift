@@ -24,7 +24,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
-    private var lastPopoverRefreshTime: Date = .distantPast
+    private var lastAllProfilesRefreshTime: Date = .distantPast
 
     // Track last known reset times for history recording
     private var lastKnownSessionResetTime: [UUID: Date] = [:]
@@ -499,7 +499,7 @@ class MenuBarManager: NSObject, ObservableObject {
         let contentView = PopoverContentView(
             manager: self,
             onRefresh: { [weak self] in
-                self?.refreshAllProfilesForPopover(force: true)
+                self?.refreshAllProfiles(force: true)
             },
             onPreferences: { [weak self] in
                 self?.closePopoverOrWindow()
@@ -603,7 +603,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 stopMonitoringForOutsideClicks()
                 // The popover lists every detected account, so refresh them
                 // together before presenting it (debounced).
-                refreshAllProfilesForPopover()
+                refreshAllProfiles()
 
                 // Update content view controller for current profile data
                 popover.contentViewController = createContentViewController()
@@ -1176,14 +1176,14 @@ class MenuBarManager: NSObject, ObservableObject {
         refreshProfiles(selected, reason: "multi-profile")
     }
 
-    /// The popover lists every detected account, not only the primary. Refresh
-    /// them together when it opens, debounced so rapid open/close does not
-    /// hammer provider endpoints.
-    private func refreshAllProfilesForPopover(force: Bool = false) {
-        guard force || Date().timeIntervalSince(lastPopoverRefreshTime) > 20 else { return }
-        lastPopoverRefreshTime = Date()
+    /// Refreshes every detected account together. Used by the popover open,
+    /// its refresh button, and the single menu bar timer. Debounced for the
+    /// popover path; the timer calls it with `force`.
+    private func refreshAllProfiles(force: Bool = false) {
+        guard force || Date().timeIntervalSince(lastAllProfilesRefreshTime) > 20 else { return }
+        lastAllProfilesRefreshTime = Date()
         let all = profileManager.profiles.filter { $0.hasAnyCredentials }
-        refreshProfiles(all, reason: "all-accounts popover")
+        refreshProfiles(all, reason: "all accounts")
     }
 
     /// Fetches usage data for a specific profile using its provider's service.
@@ -1228,223 +1228,12 @@ class MenuBarManager: NSObject, ObservableObject {
     }
 
     func refreshUsage() {
-        // In multi-profile mode, refresh ALL selected profiles
-        if profileManager.displayMode == .multi {
-            refreshAllSelectedProfiles()
-            return
-        }
-
-        // Single profile mode - refresh only active profile
-        guard let profile = profileManager.activeProfile else {
-            LoggingService.shared.log("MenuBarManager.refreshUsage: No active profile")
-            return
-        }
-
-        // Detailed logging
-        LoggingService.shared.log("MenuBarManager.refreshUsage called:")
-        LoggingService.shared.log("  - Profile: '\(profile.name)'")
-        LoggingService.shared.log("  - hasUsageCredentials: \(profile.hasUsageCredentials)")
-
-        // Check for ANY available credentials, including system Keychain CLI fallback.
-        // Without this fallback, users who only authenticated via `claude login`
-        // would be gated off here before ClaudeAPIService.getAuthentication() could
-        // discover their system-level credentials.
-        guard hasAnyAvailableCredentials() else {
-            LoggingService.shared.log("MenuBarManager: Skipping refresh - no credentials available (profile or system keychain)")
-            // Update icons to show default logo if needed
-            updateAllStatusBarIcons()
-            return
-        }
-
-        LoggingService.shared.log("MenuBarManager: Proceeding with refresh")
-        Task {
-            // Set loading state (keep existing data visible during refresh)
-            await MainActor.run {
-                self.isRefreshing = true
-            }
-
-            // Capture previous usage BEFORE fetching new data (for reset detection)
-            let previousUsage = await MainActor.run { self.usage }
-            let previousAPIUsage = await MainActor.run { self.apiUsage }
-            let currentProfileId = await MainActor.run { self.profileManager.activeProfile?.id }
-
-            // Fetch usage and status in parallel (usage via the profile's provider;
-            // for Anthropic this is the same no-arg fetchUsageData() chain as before)
-            let providerService = ProviderRegistry.service(for: profile.provider)
-            async let usageResult = providerService.fetchUsageForActiveProfile(profile)
-            async let statusResult = statusServiceForActiveProfile.fetchStatus()
-
-            var usageSuccess = false
-
-            // Fetch usage with proper error handling
-            do {
-                let newUsage = try await usageResult
-
-                await MainActor.run {
-                    // Check for resets before updating usage
-                    if let profileId = currentProfileId {
-                        self.checkAndRecordSessionReset(
-                            profileId: profileId,
-                            previousUsage: previousUsage,
-                            newUsage: newUsage
-                        )
-                        self.checkAndRecordWeeklyReset(
-                            profileId: profileId,
-                            previousUsage: previousUsage,
-                            newUsage: newUsage
-                        )
-
-                        // Record periodic snapshots for history charts
-                        UsageHistoryService.shared.recordSessionPeriodic(for: profileId, usage: newUsage, provider: profile.provider)
-                        UsageHistoryService.shared.recordWeeklyPeriodic(for: profileId, usage: newUsage, provider: profile.provider)
-                    }
-
-                    self.usage = newUsage
-
-                    // Save to active profile instead of global DataStore
-                    if let profileId = self.profileManager.activeProfile?.id {
-                        self.profileManager.saveClaudeUsage(newUsage, for: profileId)
-                    }
-
-                    // The session icon is shown or hidden by the plan's limits, so
-                    // rebuild the status items when the session limit appears or goes away
-                    if newUsage.hasSessionLimit != previousUsage.hasSessionLimit,
-                       let activeProfile = self.profileManager.activeProfile {
-                        self.updateMenuBarDisplay(with: activeProfile.iconConfig)
-                    }
-
-                    // Write statusline cache for instant CLI rendering (Claude Code only)
-                    if profile.provider.descriptor.capabilities.cliAccountSync,
-                       StatuslineService.shared.isInstalled {
-                        StatuslineService.shared.writeUsageCache(
-                            usage: newUsage,
-                            profileName: self.profileManager.activeProfile?.name
-                        )
-                    }
-
-                    // Update all menu bar icons
-                    self.updateAllStatusBarIcons()
-
-                    // Check if we should send notifications (using active profile's settings)
-                    if let profile = self.profileManager.activeProfile {
-                        NotificationManager.shared.checkAndNotify(
-                            usage: newUsage,
-                            profileName: profile.name,
-                            settings: profile.notificationSettings
-                        )
-
-                        // Check if auto-switch should trigger
-                        self.checkAutoSwitchIfNeeded(usage: newUsage, currentProfile: profile)
-                    }
-                }
-
-                // Record success for circuit breaker
-                ErrorRecovery.shared.recordSuccess(for: .api)
-                usageSuccess = true
-
-                await MainActor.run {
-                    self.consecutiveRefreshFailures = 0
-                    self.lastRefreshError = nil
-                    self.hasCredentialError = false
-                    self.lastSuccessfulRefreshTime = Date()
-
-                    WidgetSnapshotService.shared.publish(
-                        profiles: self.profileManager.profiles,
-                        activeProfileId: self.profileManager.activeProfile?.id
-                    )
-                }
-
-            } catch {
-                // Convert to AppError and log
-                let appError = AppError.wrap(error)
-                ErrorLogger.shared.log(appError, severity: .error)
-
-                // Record failure for circuit breaker
-                ErrorRecovery.shared.recordFailure(for: .api)
-
-                // Track error state for UI banners
-                await MainActor.run {
-                    self.consecutiveRefreshFailures += 1
-                    self.lastRefreshError = appError.message
-
-                    // Track credential errors specifically
-                    if appError.code == .apiUnauthorized || appError.code == .sessionKeyExpired {
-                        self.hasCredentialError = true
-                    }
-
-                    // Check if this refresh was triggered within last 5 seconds
-                    // (indicates user-initiated action like saving session key)
-                    if abs(self.lastRefreshTriggerTime.timeIntervalSinceNow) < 5 {
-                        ErrorPresenter.shared.showAlert(for: appError)
-                    } else {
-                        // Background refresh - just log
-                        LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
-                    }
-                }
-            }
-
-            // Fetch status separately (don't fail if usage fetch works)
-            do {
-                let newStatus = try await statusResult
-                await MainActor.run {
-                    self.status = newStatus
-                }
-            } catch {
-                // Convert to AppError and log
-                let appError = AppError.wrap(error)
-                ErrorLogger.shared.log(appError, severity: .info)
-
-                // Don't show error for status - it's not critical
-                LoggingService.shared.log("MenuBarManager: Failed to fetch status - [\(appError.code.rawValue)] \(appError.message)")
-            }
-
-            // Fetch API usage (using active profile's API credentials; console
-            // billing is provider-gated)
-            if let profile = await MainActor.run(body: { self.profileManager.activeProfile }),
-               profile.provider.descriptor.capabilities.consoleBilling,
-               let apiSessionKey = profile.apiSessionKey,
-               let orgId = profile.apiOrganizationId {
-                do {
-                    let newAPIUsage = try await apiService.fetchAPIUsageData(organizationId: orgId, apiSessionKey: apiSessionKey)
-                    await MainActor.run {
-                        // Check for billing cycle reset before updating usage
-                        if let profileId = currentProfileId {
-                            self.checkAndRecordBillingCycleReset(
-                                profileId: profileId,
-                                previousUsage: previousAPIUsage,
-                                newUsage: newAPIUsage
-                            )
-                        }
-
-                        self.apiUsage = newAPIUsage
-
-                        // Save to active profile instead of global DataStore
-                        if let profileId = self.profileManager.activeProfile?.id {
-                            self.profileManager.saveAPIUsage(newAPIUsage, for: profileId)
-                        }
-                    }
-                } catch {
-                    // Convert to AppError and log
-                    let appError = AppError.wrap(error)
-                    ErrorLogger.shared.log(appError, severity: .info)
-
-                    LoggingService.shared.log("MenuBarManager: Failed to fetch API usage - [\(appError.code.rawValue)] \(appError.message)")
-                }
-            }
-
-            // Clear loading state
-            await MainActor.run {
-                self.isRefreshing = false
-
-                // Show success notification if this was user-triggered and successful
-                if usageSuccess && abs(self.lastRefreshTriggerTime.timeIntervalSinceNow) < 5 {
-                    self.showSuccessNotification()
-                }
-            }
-        }
+        // The popover lists every account, so the timer refreshes every
+        // account too. cswap, OpenCode, and Codex each fetch in their own
+        // provider; this app never refreshes tokens itself.
+        refreshAllProfiles(force: true)
     }
 
-    /// Shows a brief success notification for user-triggered refreshes
     private func showSuccessNotification() {
         NotificationManager.shared.sendSuccessNotification()
     }
@@ -1883,7 +1672,7 @@ extension MenuBarManager: NSPopoverDelegate {
         // apply to a regular NSPanel.
         let contentView = PopoverContentView(
             manager: self,
-            onRefresh: { [weak self] in self?.refreshAllProfilesForPopover(force: true) },
+            onRefresh: { [weak self] in self?.refreshAllProfiles(force: true) },
             onPreferences: { [weak self] in
                 self?.closePopoverOrWindow()
                 self?.preferencesClicked()

@@ -39,19 +39,65 @@ final class AutoDetectAccountsService {
         var addedProfiles: [Profile] = []
         var updatedExisting = false
 
-        // The pre-existing Anthropic CLI profile already follows the account
-        // cswap has active. Do not add a second profile for that same login.
-        // Prefer cswap's live active record over a possibly stale oauthAccount
-        // snapshot captured on an earlier launch.
-        let activeCswap = CswapAccountService.shared.loadAccounts().first(where: { $0.isActive })
-        var cliProfileEmails = Set(
-            profiles
-                .filter { $0.provider == .anthropic && $0.hasAnyCredentials }
-                .compactMap { Self.oauthEmail(from: $0.oauthAccountJSON) }
-                .map { $0.lowercased() }
-        )
-        if let activeEmail = activeCswap?.email {
-            cliProfileEmails.insert(activeEmail.lowercased())
+        // cswap owns the Claude logins in this setup. Convert the legacy
+        // auto-created Anthropic CLI profile into the cswap account it actually
+        // represents, matched by its captured identity — never by cswap's
+        // current active slot. Matching the active slot made a pinned profile
+        // silently follow whatever account cswap had selected.
+        let cswapAccounts = CswapAccountService.shared.loadAccounts()
+        if !cswapAccounts.isEmpty {
+            let convertible = profiles.enumerated().filter { _, profile in
+                profile.provider == .anthropic
+                    && profile.claudeSessionKey == nil
+                    && profile.apiSessionKey == nil
+                    && profile.externalAccountKey == nil
+                    && (profile.id == manager.activeProfile?.id || profile.cliCredentialsJSON != nil)
+            }
+            let target = convertible.first(where: { $0.element.id == manager.activeProfile?.id })
+                ?? (convertible.count == 1 ? convertible.first : nil)
+
+            if let target {
+                let legacyIdentity = profiles[target.offset].detectedAccountIdentifier?.lowercased()
+                    ?? Self.oauthEmail(from: profiles[target.offset].oauthAccountJSON)?.lowercased()
+                    ?? (profiles[target.offset].name.contains("@") ? profiles[target.offset].name.lowercased() : nil)
+
+                let migrationAccount = legacyIdentity.flatMap { identity in
+                    cswapAccounts.first {
+                        $0.email.lowercased() == identity || $0.preferredName.lowercased() == identity
+                    }
+                }
+
+                if let migrationAccount {
+                    profiles[target.offset].provider = .cswap
+                    profiles[target.offset].externalAccountKey = migrationAccount.accountKey
+                    profiles[target.offset].detectedAccountIdentifier = migrationAccount.email
+                    profiles[target.offset].hasCliAccount = false
+                    profiles[target.offset].claudeSessionKey = nil
+                    profiles[target.offset].organizationId = nil
+                    profiles[target.offset].apiSessionKey = nil
+                    profiles[target.offset].apiOrganizationId = nil
+                    profiles[target.offset].apiSessionKeyExpiry = nil
+                    profiles[target.offset].apiUsage = nil
+                    profiles[target.offset].cliCredentialsJSON = nil
+                    profiles[target.offset].customKeychainServiceName = nil
+                    profiles[target.offset].oauthAccountJSON = nil
+                    if !profiles[target.offset].nameIsCustomized {
+                        profiles[target.offset].name = migrationAccount.preferredName
+                    }
+                    // cswap has no token-count metric; keep the profile's
+                    // layout but drop a display mode it cannot render.
+                    if !Provider.cswap.descriptor.capabilities.tokenCounts {
+                        for index in profiles[target.offset].iconConfig.metrics.indices
+                        where profiles[target.offset].iconConfig.metrics[index].weekDisplayMode == .tokens {
+                            profiles[target.offset].iconConfig.metrics[index].weekDisplayMode = .percentage
+                        }
+                    }
+                    updatedExisting = true
+                    LoggingService.shared.log("AutoDetectAccounts: converted the Claude CLI profile to cswap account \(migrationAccount.email) (matched by \(legacyIdentity ?? "no identity"))")
+                } else {
+                    LoggingService.shared.log("AutoDetectAccounts: left the Claude CLI profile as Anthropic — no cswap account matched \(legacyIdentity ?? "no identity")")
+                }
+            }
         }
 
         for account in discovered {
@@ -75,10 +121,6 @@ final class AutoDetectAccountsService {
                     profiles[index].codexCredentialsJSON = json
                     updatedExisting = true
                 }
-                continue
-            }
-            if account.provider == .cswap,
-               cliProfileEmails.contains(String(account.key.dropFirst("cswap:".count)).lowercased()) {
                 continue
             }
             // A hand-made Codex profile already follows the live auth.json.
@@ -107,27 +149,68 @@ final class AutoDetectAccountsService {
             addedProfiles.append(profile)
         }
 
-        // Replace generated names like "Funky Falcon" with the actual account
-        // identity. This also follows cswap's active account when it changes.
+        // Name any remaining Claude Code profile from its own captured login.
+        // Never take the name from cswap's active slot: that was the source of
+        // a pinned profile appearing to follow the current cswap selection.
         let anthropicCandidates = profiles.enumerated().filter { _, profile in
             profile.provider == .anthropic && profile.hasAnyCredentials && !profile.nameIsCustomized
         }
         let anthropicTarget = anthropicCandidates.first(where: { $0.element.id == manager.activeProfile?.id })
-            ?? anthropicCandidates.first(where: { Self.oauthEmail(from: $0.element.oauthAccountJSON)?.lowercased() == activeCswap?.email.lowercased() })
             ?? (anthropicCandidates.count == 1 ? anthropicCandidates.first : nil)
 
         if let target = anthropicTarget {
-            let email = activeCswap?.email ?? Self.oauthEmail(from: target.element.oauthAccountJSON)
-            let preferredName = activeCswap?.preferredName ?? email
+            let email = target.element.detectedAccountIdentifier.flatMap { $0.contains("@") ? $0 : nil }
+                ?? Self.oauthEmail(from: target.element.oauthAccountJSON)
             if let email {
                 if profiles[target.offset].detectedAccountIdentifier != email {
                     profiles[target.offset].detectedAccountIdentifier = email
                     updatedExisting = true
                 }
-                if let preferredName, target.element.name != preferredName {
-                    profiles[target.offset].name = preferredName
+                if profiles[target.offset].name != email {
+                    profiles[target.offset].name = email
                     updatedExisting = true
                 }
+            }
+        }
+
+        // One account should exist once. The old conversion could create a
+        // second profile for the same cswap login; collapse those by external
+        // key, always keeping the currently pinned profile.
+        var seenExternalKeys = Set<String>()
+        var dedupedProfiles: [Profile] = []
+        var removedDuplicates: [Profile] = []
+        for profile in profiles {
+            guard let key = profile.externalAccountKey, !key.isEmpty else {
+                dedupedProfiles.append(profile)
+                continue
+            }
+            if let index = dedupedProfiles.firstIndex(where: { $0.externalAccountKey == key }) {
+                let existing = dedupedProfiles[index]
+                let activeId = manager.activeProfile?.id
+                let keepNew: Bool
+                if profile.id == activeId {
+                    keepNew = true
+                } else if existing.id == activeId {
+                    keepNew = false
+                } else {
+                    keepNew = profile.createdAt < existing.createdAt
+                }
+
+                if keepNew {
+                    removedDuplicates.append(existing)
+                    dedupedProfiles[index] = profile
+                } else {
+                    removedDuplicates.append(profile)
+                }
+            } else {
+                dedupedProfiles.append(profile)
+            }
+        }
+        if !removedDuplicates.isEmpty {
+            profiles = dedupedProfiles
+            updatedExisting = true
+            for duplicate in removedDuplicates {
+                LoggingService.shared.log("AutoDetectAccounts: removed duplicate profile '\(duplicate.name)' for \(duplicate.externalAccountKey ?? "unknown")")
             }
         }
 
@@ -138,6 +221,9 @@ final class AutoDetectAccountsService {
                 manager.activeProfile = refreshed
             }
             ProfileStore.shared.saveProfiles(profiles)
+            for duplicate in removedDuplicates {
+                ProfileStore.shared.deleteProfileSecrets(duplicate.id)
+            }
             NotificationCenter.default.post(name: .multiProfileConfigChanged, object: nil)
             LoggingService.shared.log("AutoDetectAccounts: created \(addedProfiles.count) profile(s) from local tools")
         }
@@ -151,9 +237,9 @@ final class AutoDetectAccountsService {
             ProfileStore.shared.saveActiveProfileId(first.id)
         }
 
-        // One menu bar tracker by default. The active profile is the primary
-        // account, and the user can change it from the header switcher or
-        // Manage Profiles. Multi-profile mode remains opt-in.
+        // One menu bar tracker by default. The active (pinned) profile is the
+        // account shown in the menu bar, and the user can change it from the
+        // account list or Manage Profiles. Multi-profile mode remains opt-in.
         if !UserDefaults.standard.bool(forKey: Self.didApplySinglePrimaryKey) {
             if manager.displayMode == .multi {
                 manager.displayMode = .single
@@ -174,7 +260,7 @@ final class AutoDetectAccountsService {
                 DiscoveredAccount(
                     provider: .cswap,
                     key: account.accountKey,
-                    name: account.displayName,
+                    name: account.preferredName,
                     accountIdentifier: account.email,
                     codexCredentialsJSON: nil,
                     refreshInterval: 60

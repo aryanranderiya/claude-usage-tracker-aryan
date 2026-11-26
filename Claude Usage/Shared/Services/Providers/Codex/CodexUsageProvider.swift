@@ -21,10 +21,9 @@ final class CodexUsageProvider: UsageProviderService {
         profile.hasUsageCredentials
     }
 
-    /// load credentials → refresh if stale (>8 days) → fetch → map.
-    /// On a 401/403 (access token expired before the 8-day mark), force one
-    /// refresh and retry once — the Codex CLI has no equivalent of Anthropic's
-    /// system-keychain fallback, so a failed retry surfaces the error.
+    /// load the current credentials → fetch → map. The app never refreshes or
+    /// writes Codex tokens: the Codex CLI owns that, and rotating a token here
+    /// could invalidate the CLI's or another switcher's copy.
     func fetchUsage(for profile: Profile) async throws -> ClaudeUsage {
         // The shared ~/.codex/auth.json reflects ONE signed-in Codex account.
         // A profile without its own pasted credentials may fall back to it
@@ -47,19 +46,9 @@ final class CodexUsageProvider: UsageProviderService {
             }
         }
 
-        var credentials = try authService.loadCredentials(for: profile)
-        credentials = try await authService.refreshIfNeeded(credentials, for: profile)
-
-        let previousUsage = profile.claudeUsage
-        do {
-            let response = try await apiService.fetchUsage(credentials: credentials)
-            return CodexAPIService.mapToUsage(response, previous: previousUsage)
-        } catch let error as AppError where error.code == .providerAuthExpired {
-            guard !credentials.refreshToken.isEmpty else { throw error }
-            let refreshed = try await authService.refreshIfNeeded(credentials, for: profile, force: true)
-            let response = try await apiService.fetchUsage(credentials: refreshed)
-            return CodexAPIService.mapToUsage(response, previous: previousUsage)
-        }
+        let credentials = try authService.loadCredentials(for: profile)
+        let response = try await apiService.fetchUsage(credentials: credentials)
+        return CodexAPIService.mapToUsage(response, previous: profile.claudeUsage)
     }
 
     /// Whether `profile`, which has no pasted Codex credentials, may read the

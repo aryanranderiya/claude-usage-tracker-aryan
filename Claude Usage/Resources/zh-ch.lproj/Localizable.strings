@@ -840,7 +840,6 @@
 "support.no_tracking" = "无跟踪";
 "support.no_tracking_desc" = "您的隐私很重要。没有分析、没有遥测、没有数据收集。一切都保留在您的Mac上。";
 "support.message" = "如果您觉得这个应用有用，请考虑支持其开发";
-"support.buy_coffee" = "请我喝咖啡";
 "support.footer" = "您的支持有助于保持这个项目的活力和增长";
 "support.also_support" = "您还可以通过以下方式支持";
 "support.star_github" = "在GitHub上加星";
@@ -1145,9 +1144,9 @@
 "keep_awake.problem_listener" = "自动模式无法检测到 Claude Code：本地监听端口被其他应用或另一个 Claude Usage 占用。";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The active profile is the primary tracker shown in the menu bar. Choose any profile below to make it primary.";
-"profiles.primary_badge" = "Primary";
-"profiles.make_primary" = "Make primary";
+"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_badge" = "Pinned";
+"profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
 "profiles.display_name_hint" = "Shown in the popover, switcher, and settings.";
