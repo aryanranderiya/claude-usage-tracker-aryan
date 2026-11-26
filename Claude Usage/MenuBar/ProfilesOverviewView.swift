@@ -17,6 +17,10 @@ struct ProfilesOverviewView: View {
         var id: String { provider.rawValue }
     }
 
+    private var activeCswapKey: String? {
+        CswapAccountService.shared.loadAccounts().first(where: { $0.isActive })?.accountKey
+    }
+
     private var groups: [Group] {
         let order: [Provider] = [.anthropic, .cswap, .opencode, .codex]
         return order.compactMap { provider in
@@ -46,11 +50,17 @@ struct ProfilesOverviewView: View {
                         ForEach(group.profiles) { profile in
                             ProfileSummaryCard(
                                 profile: profile,
-                                isPrimary: profileManager.activeProfile?.id == profile.id,
+                                isPinned: profileManager.pinnedProfileId == profile.id,
+                                isCswapActive: profile.provider == .cswap && activeCswapKey != nil && activeCswapKey == profile.externalAccountKey,
+                                isMenuBar: profileManager.activeProfile?.id == profile.id,
                                 showRemaining: profile.iconConfig.showRemainingPercentage
                             ) {
                                 Task {
-                                    _ = await profileManager.activateProfile(profile.id)
+                                    if profileManager.pinnedProfileId == profile.id {
+                                        profileManager.unpinMenuBarProfile()
+                                    } else {
+                                        _ = await profileManager.pinProfile(profile.id)
+                                    }
                                 }
                             }
 
@@ -98,13 +108,15 @@ struct ProfilesOverviewView: View {
     }
 }
 
-/// Compact account card: identity, primary selector, and 5h/7d/Fable bars.
+/// Compact account card: identity, pin selector, and 5h/7d/Fable bars.
 /// The chevron expands into the full `SmartUsageDashboard` for that profile.
 private struct ProfileSummaryCard: View {
     let profile: Profile
-    let isPrimary: Bool
+    let isPinned: Bool
+    let isCswapActive: Bool
+    let isMenuBar: Bool
     let showRemaining: Bool
-    let onMakePrimary: () -> Void
+    let onTogglePin: () -> Void
 
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -134,12 +146,26 @@ private struct ProfileSummaryCard: View {
                         .minimumScaleFactor(0.86)
                         .allowsTightening(true)
 
-                    if isPrimary || planText != nil {
+                    if isPinned || isCswapActive || planText != nil {
                         HStack(spacing: 5) {
-                            if isPrimary {
+                            if isPinned {
                                 Text("profiles.primary_badge".localized)
                                     .font(.system(size: 9, weight: .semibold))
                                     .foregroundColor(.accentColor)
+                            }
+
+                            if isCswapActive {
+                                HStack(spacing: 3) {
+                                    Circle()
+                                        .fill(Color.blue)
+                                        .frame(width: 4, height: 4)
+                                    Text("profiles.cswap_active_badge".localized)
+                                        .font(.system(size: 8.5, weight: .semibold))
+                                        .foregroundColor(.blue)
+                                }
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1.5)
+                                .background(Capsule().fill(Color.blue.opacity(0.14)))
                             }
 
                             if let planText {
@@ -154,16 +180,15 @@ private struct ProfileSummaryCard: View {
 
                 Spacer(minLength: 6)
 
-                Button(action: onMakePrimary) {
-                    Image(systemName: isPrimary ? "pin.fill" : "pin")
+                Button(action: onTogglePin) {
+                    Image(systemName: isPinned ? "pin.fill" : "pin")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(isPrimary ? .accentColor : .secondary)
+                        .foregroundColor(isPinned ? .accentColor : .secondary)
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("profiles.make_primary".localized)
-                .disabled(isPrimary)
+                .help(isPinned ? "profiles.unpin_menu_bar".localized : "profiles.make_primary".localized)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .semibold))
@@ -197,7 +222,7 @@ private struct ProfileSummaryCard: View {
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.primary.opacity(isPrimary ? 0.07 : (isHovered ? 0.05 : 0.035)))
+                .fill(Color.primary.opacity(isMenuBar ? 0.07 : (isHovered ? 0.05 : 0.035)))
         )
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) {

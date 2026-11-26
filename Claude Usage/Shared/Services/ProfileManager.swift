@@ -14,6 +14,9 @@ class ProfileManager: ObservableObject {
 
     @Published var profiles: [Profile] = []
     @Published var activeProfile: Profile?
+    /// The account explicitly pinned to the menu bar. `nil` means the menu bar
+    /// follows whichever cswap account is currently active.
+    @Published var pinnedProfileId: UUID?
     @Published var displayMode: ProfileDisplayMode = .single
     @Published var multiProfileConfig: MultiProfileDisplayConfig = .default
     @Published var isSwitchingProfile: Bool = false
@@ -29,6 +32,7 @@ class ProfileManager: ObservableObject {
 
     func loadProfiles() {
         profiles = profileStore.loadProfiles()
+        let hadProfiles = !profiles.isEmpty
 
         // Ensure minimum 1 profile
         if profiles.isEmpty {
@@ -40,21 +44,45 @@ class ProfileManager: ObservableObject {
             syncCLICredentialsToDefaultProfile(defaultProfile.id)
         }
 
-        // Load active profile
-        if let activeId = profileStore.loadActiveProfileId(),
-           let profile = profiles.first(where: { $0.id == activeId }) {
-            activeProfile = profile
+        let storedPinnedId = profileStore.loadPinnedProfileId()
+        let hasPinnedPreference = profileStore.hasPinnedProfilePreference()
+
+        if hasPinnedPreference,
+           let storedPinnedId,
+           let pinned = profiles.first(where: { $0.id == storedPinnedId }) {
+            pinnedProfileId = pinned.id
+            activeProfile = pinned
         } else {
-            activeProfile = profiles.first
-            if let first = profiles.first {
+            pinnedProfileId = nil
+            if let activeId = profileStore.loadActiveProfileId(),
+               let profile = profiles.first(where: { $0.id == activeId }) {
+                activeProfile = profile
+            } else if let first = profiles.first {
+                activeProfile = first
                 profileStore.saveActiveProfileId(first.id)
             }
+        }
+
+        if !hasPinnedPreference {
+            // Existing installs had no separate pin state; their active profile
+            // was the pin. Fresh installs start unpinned and follow cswap.
+            if hadProfiles, let activeProfile {
+                pinnedProfileId = activeProfile.id
+                profileStore.savePinnedProfileId(activeProfile.id)
+            } else {
+                profileStore.savePinnedProfileId(nil)
+            }
+        } else if storedPinnedId != nil, pinnedProfileId == nil {
+            // The pinned account no longer exists.
+            profileStore.savePinnedProfileId(nil)
         }
 
         displayMode = profileStore.loadDisplayMode()
         multiProfileConfig = profileStore.loadMultiProfileConfig()
 
-        LoggingService.shared.log("ProfileManager: Loaded \(profiles.count) profile(s), active: \(activeProfile?.name ?? "none")")
+        followCswapActiveIfUnpinned()
+
+        LoggingService.shared.log("ProfileManager: Loaded \(profiles.count) profile(s), active: \(activeProfile?.name ?? "none"), pinned: \(pinnedProfileId?.uuidString ?? "cswap active")")
     }
 
     // MARK: - Profile Operations
@@ -137,7 +165,12 @@ class ProfileManager: ObservableObject {
         UsageHistoryService.shared.deleteHistory(for: id)
         LoggingService.shared.log("Successfully deleted usage history for profile: \(profileName)")
 
+        let wasPinned = pinnedProfileId == id
         profiles.removeAll { $0.id == id }
+        if wasPinned {
+            pinnedProfileId = nil
+            profileStore.savePinnedProfileId(nil)
+        }
 
         // Remove the profile's credentials from the Keychain (they no longer live
         // in the profiles plist — #267).
@@ -149,12 +182,13 @@ class ProfileManager: ObservableObject {
                 Task {
                     // The deleted profile is gone, so a dead login on `first` must not leave it
                     // as the active profile: activate anyway, without writing the snapshot.
-                    await activateProfile(first.id, cancelIfLoginExpired: false)
+                    await activateProfile(first.id, pin: false, cancelIfLoginExpired: false)
                 }
             }
         }
 
         profileStore.saveProfiles(profiles)
+        followCswapActiveIfUnpinned()
         LoggingService.shared.log("Deleted profile: \(profileName)")
     }
 
@@ -201,7 +235,7 @@ class ProfileManager: ObservableObject {
     /// not cancel: the profile is still activated, but its snapshot is not written to the
     /// keychain (used when the active profile was deleted and something must take its place).
     @discardableResult
-    func activateProfile(_ id: UUID, cancelIfLoginExpired: Bool = true) async -> Bool {
+    func activateProfile(_ id: UUID, pin: Bool = true, cancelIfLoginExpired: Bool = true) async -> Bool {
         guard !switchingSemaphore else {
             LoggingService.shared.log("Profile switch already in progress, ignoring")
             return false
@@ -213,6 +247,10 @@ class ProfileManager: ObservableObject {
         }
 
         if activeProfile?.id == id {
+            if pin {
+                pinnedProfileId = id
+                profileStore.savePinnedProfileId(id)
+            }
             LoggingService.shared.log("Profile already active: \(profile.name)")
             return true
         }
@@ -327,6 +365,10 @@ class ProfileManager: ObservableObject {
             profiles[index] = updated
         }
 
+        if pin {
+            pinnedProfileId = id
+            profileStore.savePinnedProfileId(id)
+        }
         activeProfile = updated
         profileStore.saveActiveProfileId(id)
         profileStore.saveProfiles(profiles)
@@ -355,6 +397,34 @@ class ProfileManager: ObservableObject {
 
         LoggingService.shared.log("Successfully activated profile: \(updatedProfile.name)")
         return true
+    }
+
+    @discardableResult
+    func pinProfile(_ id: UUID) async -> Bool {
+        await activateProfile(id, pin: true)
+    }
+
+    /// Clear the pin and follow cswap's active account when possible.
+    func unpinMenuBarProfile() {
+        pinnedProfileId = nil
+        profileStore.savePinnedProfileId(nil)
+        followCswapActiveIfUnpinned()
+        LoggingService.shared.log("ProfileManager: Unpinned the menu bar profile")
+    }
+
+    /// When nothing is pinned, the menu bar must mirror cswap's current active
+    /// account. This never writes to cswap and never pins the followed profile.
+    func followCswapActiveIfUnpinned() {
+        guard pinnedProfileId == nil else { return }
+        guard let activeAccount = CswapAccountService.shared.loadAccounts().first(where: { $0.isActive }),
+              let profile = profiles.first(where: {
+                  $0.provider == .cswap && $0.externalAccountKey == activeAccount.accountKey
+              }) else { return }
+        guard activeProfile?.id != profile.id else { return }
+
+        activeProfile = profile
+        profileStore.saveActiveProfileId(profile.id)
+        LoggingService.shared.log("ProfileManager: Menu bar follows cswap active account \(activeAccount.email)")
     }
 
     // MARK: - Credentials

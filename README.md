@@ -89,10 +89,10 @@ How it stays out of the way:
 
 ### Accounts popover
 
-Clicking the menu bar opens every detected account, grouped by source and using the provider's own mark. Each card shows its 5h / 7d / monthly (OpenCode) / Fable windows with pace markers; click anywhere on a card to expand the full details, and use the pin to choose the primary menu bar tracker.
+Clicking the menu bar opens every detected account, grouped by source and using the provider's own mark. Each card shows its 5h / 7d / monthly (OpenCode) / Fable windows with pace markers; click anywhere on a card to expand the full details. The pin keeps an account in the menu bar; when nothing is pinned, the menu bar follows the account currently active in cswap. The blue **cswap active** chip marks cswap's current account.
 
 <p align="center">
-  <img src="docs/images/accounts-popover.png" alt="Accounts popover grouped by Claude Code, cswap, OpenCode, and Codex" width="360">
+  <img src="docs/images/accounts-popover.png" alt="Accounts popover grouped by cswap, OpenCode, and Codex, with the pinned account and the cswap-active chip" width="360">
 </p>
 
 Build from source with Xcode 16 or later. The source folders are synchronized groups, so the added provider files need no `.pbxproj` edits:

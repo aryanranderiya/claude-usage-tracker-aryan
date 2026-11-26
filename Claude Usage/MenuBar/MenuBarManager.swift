@@ -1139,6 +1139,13 @@ class MenuBarManager: NSObject, ObservableObject {
 
             // Update the menu bar once after all profiles are refreshed.
             await MainActor.run {
+                // With no explicit pin, keep the menu bar on cswap's current
+                // active account. The cswap providers above refreshed the live
+                // snapshot this reads.
+                if self.profileManager.displayMode == .single {
+                    self.profileManager.followCswapActiveIfUnpinned()
+                }
+
                 if self.profileManager.displayMode == .multi {
                     let config = self.profileManager.multiProfileConfig
                     self.statusBarUIManager?.updateMultiProfileButtons(

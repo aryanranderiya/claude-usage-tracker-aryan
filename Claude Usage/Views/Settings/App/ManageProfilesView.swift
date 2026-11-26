@@ -383,6 +383,17 @@ struct ProfileRow: View {
     @State private var showingEditor = false
     @State private var showingDeleteConfirmation = false
 
+    private var isPinned: Bool {
+        profileManager.pinnedProfileId == profile.id
+    }
+
+    private var isCswapActive: Bool {
+        guard profile.provider == .cswap else { return false }
+        return CswapAccountService.shared.loadAccounts().contains {
+            $0.isActive && $0.accountKey == profile.externalAccountKey
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
@@ -397,7 +408,7 @@ struct ProfileRow: View {
                     .padding(.vertical, 1)
                     .background(Capsule().fill(Color(nsColor: .windowBackgroundColor)))
             }
-            .foregroundColor(profileManager.activeProfile?.id == profile.id ? .accentColor : .secondary)
+            .foregroundColor(isPinned ? .accentColor : .secondary)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
@@ -406,7 +417,7 @@ struct ProfileRow: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
 
-                    if profileManager.activeProfile?.id == profile.id {
+                    if isPinned {
                         Text("profiles.primary_badge".localized)
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white)
@@ -414,6 +425,15 @@ struct ProfileRow: View {
                             .padding(.vertical, 2)
                             .background(Color.accentColor)
                             .cornerRadius(4)
+                    }
+
+                    if isCswapActive {
+                        Text("profiles.cswap_active_badge".localized)
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(Capsule().fill(Color.blue.opacity(0.14)))
                     }
                 }
 
@@ -436,18 +456,23 @@ struct ProfileRow: View {
                 .buttonStyle(.plain)
                 .help("profiles.rename".localized)
 
-                if profileManager.activeProfile?.id != profile.id {
-                    Button {
-                        Task {
-                            await profileManager.activateProfile(profile.id)
+                Button {
+                    Task {
+                        if isPinned {
+                            profileManager.unpinMenuBarProfile()
+                        } else {
+                            _ = await profileManager.pinProfile(profile.id)
                         }
-                    } label: {
-                        Image(systemName: "pin.circle")
-                            .font(.system(size: 12))
                     }
-                    .buttonStyle(.plain)
-                    .help("profiles.make_primary".localized)
+                } label: {
+                    Image(systemName: isPinned ? "pin.fill" : "pin.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(isPinned ? .accentColor : .secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help(isPinned ? "profiles.unpin_menu_bar".localized : "profiles.make_primary".localized)
 
                 if profileManager.profiles.count > 1 {
                     Button {

@@ -17,6 +17,7 @@ class ProfileStore {
     private enum Keys {
         static let profiles = "profiles_v3"
         static let activeProfileId = "activeProfileId"
+        static let pinnedProfileId = "pinnedProfileId"
         static let displayMode = "profileDisplayMode"
         static let multiProfileConfig = "multiProfileDisplayConfig"
     }
@@ -161,6 +162,23 @@ class ProfileStore {
             return nil
         }
         return UUID(uuidString: uuidString)
+    }
+
+    /// `nil` means the menu bar follows cswap's active account. An empty
+    /// string stores that choice explicitly, so an existing install can be
+    /// migrated once to a real pin without re-pinning on the next launch.
+    func savePinnedProfileId(_ id: UUID?) {
+        defaults.set(id?.uuidString ?? "", forKey: Keys.pinnedProfileId)
+    }
+
+    func loadPinnedProfileId() -> UUID? {
+        guard let value = defaults.string(forKey: Keys.pinnedProfileId),
+              !value.isEmpty else { return nil }
+        return UUID(uuidString: value)
+    }
+
+    func hasPinnedProfilePreference() -> Bool {
+        defaults.object(forKey: Keys.pinnedProfileId) != nil
     }
 
     func saveDisplayMode(_ mode: ProfileDisplayMode) {

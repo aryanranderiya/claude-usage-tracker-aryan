@@ -237,6 +237,9 @@ final class AutoDetectAccountsService {
             ProfileStore.shared.saveActiveProfileId(first.id)
         }
 
+        // If nothing is pinned, the menu bar mirrors cswap's active account.
+        manager.followCswapActiveIfUnpinned()
+
         // One menu bar tracker by default. The active (pinned) profile is the
         // account shown in the menu bar, and the user can change it from the
         // account list or Manage Profiles. Multi-profile mode remains opt-in.

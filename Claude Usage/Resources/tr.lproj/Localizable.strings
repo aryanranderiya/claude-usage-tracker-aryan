@@ -1149,8 +1149,10 @@
 "keep_awake.problem_listener" = "Otomatik mod Claude Code'u göremiyor: yerel dinleyicinin portu başka bir uygulama veya başka bir Claude Usage kopyası tarafından kullanılıyor.";
 
 // Fork: primary account + editable display identity
-"profiles.primary_hint" = "The pinned profile is the account shown in the menu bar. Pin any account below to switch it.";
+"profiles.primary_hint" = "Pin an account to keep it in the menu bar. When nothing is pinned, the menu bar follows the active cswap account.";
 "profiles.primary_badge" = "Pinned";
+"profiles.cswap_active_badge" = "cswap active";
+"profiles.unpin_menu_bar" = "Unpin from menu bar";
 "profiles.make_primary" = "Pin to menu bar";
 "profiles.edit_title" = "Edit Profile";
 "profiles.display_name" = "Display name";
