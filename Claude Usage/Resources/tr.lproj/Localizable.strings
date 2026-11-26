@@ -1141,7 +1141,6 @@
 "support.popup_title" = "Merhaba, ben Hamed 👋";
 "support.popup_later" = "Belki sonra";
 "support.popup_signature" = "Claude Usage'ın arkasındaki tek kişilik ekip";
-"support.popup_body" = "Ücretsiz, açık kaynak, tek kişi tarafından yapıldı — reklam yok, izleme yok. Sizi bir oturum limitini yakmaktan kurtardıysa, bir kahve onu ayakta tutar.";
 "support.popup_days" = "%d gündür limitlerinizi izliyor — her zaman ücretsiz";
 "keep_awake.consent_title" = "Claude Code kancaları eklensin mi?";
 "keep_awake.consent_message" = "Claude Code'un ne zaman çalıştığını anlamak için Keep Awake, ~/.claude/settings.json dosyasına kancalar ekler ve bunları yalnızca bu Mac'te dinler. Diğer kancalarınız ve ayarlarınız olduğu gibi kalır. Bu seçeneği kapatarak kaldırabilirsiniz.";

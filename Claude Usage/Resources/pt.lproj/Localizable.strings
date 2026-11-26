@@ -1149,7 +1149,6 @@
 "support.popup_title" = "Olá, sou o Hamed 👋";
 "support.popup_later" = "Talvez mais tarde";
 "support.popup_signature" = "a equipa de uma só pessoa por trás do Claude Usage";
-"support.popup_body" = "Grátis, open source, feita por uma só pessoa — sem anúncios nem rastreio. Se já te salvou de queimar um limite de sessão, um café mantém-na viva.";
 "support.popup_days" = "A vigiar os teus limites há %d dias — sempre grátis";
 "keep_awake.consent_title" = "Adicionar hooks do Claude Code?";
 "keep_awake.consent_message" = "Para saber quando o Claude Code está a trabalhar, o Keep Awake adiciona hooks a ~/.claude/settings.json e escuta-os apenas neste Mac. Os seus outros hooks e definições não são alterados. Pode removê-los desativando esta opção.";

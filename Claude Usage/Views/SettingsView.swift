@@ -767,7 +767,7 @@ enum SettingsSection: String, CaseIterable {
         case .language: return "globe"
         case .claudeCode: return "chevron.left.forwardslash.chevron.right"
         case .notchHUD: return "inset.filled.topthird.rectangle"
-        case .keepAwake: return "cup.and.saucer.fill"
+        case .keepAwake: return "bolt.fill"
         case .shortcuts: return "keyboard"
         case .updates: return "arrow.down.circle.fill"
         case .support: return "heart.fill"

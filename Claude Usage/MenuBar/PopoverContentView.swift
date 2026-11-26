@@ -293,10 +293,8 @@ struct HeaderIconButton: View {
 /// from auto mode — so it doubles as an "is my Mac staying awake?" indicator.
 /// Hovering shows a live status card; right-click offers durations and auto mode.
 ///
-/// The looping glow and steam live in `KeepAwakeAmbientLayerView` (Core
-/// Animation), not SwiftUI: a `.repeatForever` animation here re-renders the
-/// whole popover every frame while it's open. Only one-shot effects stay in
-/// SwiftUI.
+/// Keep Awake uses a power glyph so it cannot be mistaken for the removed
+/// support link.
 struct KeepAwakeHeaderButton: View {
     @ObservedObject private var service = KeepAwakeService.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -337,13 +335,7 @@ struct KeepAwakeHeaderButton: View {
                         .id(-rippleID)
                 }
 
-                if isActive {
-                    KeepAwakeAmbientLayerView(animates: !reduceMotion)
-                        .frame(width: 24, height: 24)
-                        .allowsHitTesting(false)
-                }
-
-                Image(systemName: isActive || isArmed ? "cup.and.saucer.fill" : "cup.and.saucer")
+                Image(systemName: isActive || isArmed ? "bolt.fill" : "bolt")
                     .font(.system(size: 10.5, weight: .medium))
                     .imageScale(.medium)
                     .symbolReplaceTransitionCompat()
@@ -428,7 +420,7 @@ private struct KeepAwakeHoverCard: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 5) {
-                    Image(systemName: service.isAssertionHeld ? "cup.and.saucer.fill" : "cup.and.saucer")
+                    Image(systemName: service.isAssertionHeld ? "bolt.fill" : "bolt")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(service.isAssertionHeld ? .orange : .secondary)
                     Text("section.keep_awake_title".localized)
